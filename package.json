@@ -1,9 +1,9 @@
 {
   "name": "campushubserver",
   "version": "1.0.0",
-  "main": "dist/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node dist/server.js",
+    "start": "node server.js",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "vercel-build": "npm run build"
