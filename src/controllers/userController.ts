@@ -117,7 +117,7 @@ export const updateUserProfile = asyncHandler(async (req: Request, res: Response
 });
 
 // Follow a User
-export const followUser = async (req: Request, res: Response) => {
+export const followUser = async (req: Request, res: Response):Promise<any> => {
   try {
     const { userToFollowId, currentUserId } = req.params;
 

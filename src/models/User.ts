@@ -15,8 +15,8 @@ const UserSchema = new mongoose.Schema({
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     chats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
-    // followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    // following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     notifications: [{ type: mongoose.Schema.Types.ObjectId, ref: "Notification" }],
     batch: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
     role: {
