@@ -14,37 +14,40 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addComment = exports.likePost = exports.getPostDetails = exports.getPosts = exports.createPost = void 0;
 const Post_1 = __importDefault(require("../models/Post"));
-const createPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
+exports.createPost = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { userId, content, image } = req.body;
-        const newPost = new Post_1.default({ userId, content, image });
+        const { author, content, image } = req.body;
+        if (!author || !content || !image) {
+            return res.status(400).json({ success: false, message: "All fields are required" });
+        }
+        const newPost = new Post_1.default({ author, content, image });
         yield newPost.save();
-        res.status(201).json(newPost);
+        res.status(201).json({ success: true, message: "Post Created Successfully!", data: newPost });
     }
     catch (error) {
-        res.status(500).json({ message: "Failed to create post" });
+        res.status(500).json({ success: false, message: "Failed to create post" });
     }
-});
-exports.createPost = createPost;
+}));
 const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const posts = yield Post_1.default.find().populate("userId", "name profilePic").sort({ createdAt: -1 });
-        res.status(200).json(posts);
+        const posts = yield Post_1.default.find().populate("author", ["name", "profilePic"]).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, message: `${posts.length} Posts found.`, data: posts });
     }
     catch (error) {
-        res.status(500).json({ message: "Failed to fetch posts" });
+        res.status(500).json({ success: false, message: "Failed to fetch posts" });
     }
 });
 exports.getPosts = getPosts;
 const getPostDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const post = yield Post_1.default.findById(req.params.id).populate("user", "name profilePic");
+        const post = yield Post_1.default.findById(req.params.id).populate("user", ["name", "profilePic"]);
         if (!post)
-            return res.status(404).json({ message: "Post not found" });
-        res.status(200).json(post);
+            return res.status(404).json({ success: false, message: "Post not found" });
+        res.status(200).json({ success: true, message: "Post found", data: post });
     }
     catch (error) {
-        res.status(500).json({ message: "Server Error", error });
+        res.status(500).json({ success: false, message: "Server Error", data: error });
     }
 });
 exports.getPostDetails = getPostDetails;
@@ -53,7 +56,7 @@ const likePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const { postId, userId } = req.body;
         const post = yield Post_1.default.findById(postId);
         if (!post)
-            return res.status(404).json({ message: "Post not found" });
+            return res.status(404).json({ success: false, message: "Post not found" });
         const alreadyLiked = post.likes.includes(userId);
         if (alreadyLiked) {
             post.likes = post.likes.filter((id) => id.toString() !== userId);
@@ -62,10 +65,10 @@ const likePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             post.likes.push(userId);
         }
         yield post.save();
-        res.status(200).json(post);
+        res.status(200).json({ success: true, message: "likes updated", data: post });
     }
     catch (error) {
-        res.status(500).json({ message: "Failed to like post" });
+        res.status(500).json({ success: false, message: "Failed to like post" });
     }
 });
 exports.likePost = likePost;
@@ -73,14 +76,14 @@ const addComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     try {
         const post = yield Post_1.default.findById(req.params.id);
         if (!post)
-            return res.status(404).json({ message: "Post not found" });
+            return res.status(404).json({ success: false, message: "Post not found" });
         const { user, text } = req.body;
         post.comments.push({ user, text });
         yield post.save();
-        res.status(201).json(post.comments);
+        res.status(201).json({ success: true, message: "Post saved successfully", data: post.comments });
     }
     catch (error) {
-        res.status(500).json({ message: "Server Error", error });
+        res.status(500).json({ success: false, message: "Server Error", data: error });
     }
 });
 exports.addComment = addComment;

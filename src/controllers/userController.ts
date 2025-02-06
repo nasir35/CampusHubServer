@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { User } from "../models/User";
+import { IUser, User } from "../models/User";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import asyncHandler from "../middlewares/asyncHandler";
@@ -31,7 +31,7 @@ export const registerUser = async (req: RegisterUserRequest, res: Response<ApiRe
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = new User({
+        const user:IUser = new User({
             name,
             email,
             password: hashedPassword,
@@ -40,7 +40,7 @@ export const registerUser = async (req: RegisterUserRequest, res: Response<ApiRe
         });
         await user.save();
 
-        res.status(201).json({success:false, message: "User registered successfully" });
+        res.status(201).json({success:true, message: "User registered successfully" });
     } catch (error) {
         res.status(500).json({success : false, message : "failed user registration", data : error});
     }

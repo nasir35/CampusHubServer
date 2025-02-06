@@ -12,4 +12,6 @@ router.get("/", userController_1.getAllUsers);
 router.get("/profile", userController_1.getUserProfile);
 router.put("/:userId", userController_1.updateUserProfile);
 router.post("/follow/:currentUserId/:userToFollowId", userController_1.followUser);
+router.post("/unfollow/:currentUserId/:userToUnfollowId", userController_1.unfollowUser);
+router.delete("deleteUserProfile/:id", userController_1.deleteUser);
 exports.default = router;
