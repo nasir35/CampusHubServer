@@ -1,43 +1,48 @@
 import { Request, Response } from "express";
 import Post from "../models/Post";
+import asyncHandler from "../middlewares/asyncHandler";
+import { ApiResponse } from "../types/response";
 
-export const createPost = async (req: Request, res: Response) => {
+export const createPost = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
   try {
-    const { userId, content, image } = req.body;
-    const newPost = new Post({ userId, content, image });
+    const { author, content, image } = req.body;
+    if (!author ||!content ||!image) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+    const newPost = new Post({ author, content, image });
     await newPost.save();
-    res.status(201).json(newPost);
+    res.status(201).json({ success: true, message: "Post Created Successfully!", data: newPost });
   } catch (error) {
-    res.status(500).json({ message: "Failed to create post" });
+    res.status(500).json({ success : false, message: "Failed to create post" });
   }
-};
+});
 
-export const getPosts = async (req: Request, res: Response) => {
+export const getPosts = async (req: Request, res: Response<ApiResponse>) => {
   try {
-    const posts = await Post.find().populate("userId", "name profilePic").sort({ createdAt: -1 });
-    res.status(200).json(posts);
+    const posts = await Post.find().populate("author", ["name", "profilePic"]).sort({ createdAt: -1 });
+    res.status(200).json({success: true, message: `${posts.length} Posts found.`, data: posts});
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch posts" });
+    res.status(500).json({ success: false, message: "Failed to fetch posts" });
   }
 };
 
 
-export const getPostDetails = async (req: Request, res: Response): Promise<any> => {
+export const getPostDetails = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   try {
-    const post = await Post.findById(req.params.id).populate("user", "name profilePic");
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    const post = await Post.findById(req.params.id).populate("user", ["name", "profilePic"]);
+    if (!post) return res.status(404).json({success : false, message: "Post not found" });
 
-    res.status(200).json(post);
+    res.status(200).json({success : true, message: "Post found" , data: post});
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error });
+    res.status(500).json({success:false, message: "Server Error", data : error });
   }
 };
 
-export const likePost = async (req: Request, res: Response) : Promise <any> => {
+export const likePost = async (req: Request, res: Response<ApiResponse>) : Promise <any> => {
   try {
     const { postId, userId } = req.body;
     const post = await Post.findById(postId);
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (!post) return res.status(404).json({ success: false,message: "Post not found" });
 
     const alreadyLiked = post.likes.includes(userId);
     if (alreadyLiked) {
@@ -46,23 +51,23 @@ export const likePost = async (req: Request, res: Response) : Promise <any> => {
       post.likes.push(userId);
     }
     await post.save();
-    res.status(200).json(post);
+    res.status(200).json({ success: true, message: "likes updated", data: post });
   } catch (error) {
-    res.status(500).json({ message: "Failed to like post" });
+    res.status(500).json({success:false, message: "Failed to like post" });
   }
 };
 
-export const addComment = async (req: Request, res: Response): Promise<any> => {
+export const addComment = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (!post) return res.status(404).json({success:false, message: "Post not found" });
 
     const { user, text } = req.body;
     post.comments.push({ user, text });
     await post.save();
 
-    res.status(201).json(post.comments);
+    res.status(201).json({ success: true, message: "Post saved successfully", data: post.comments });
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error });
+    res.status(500).json({success:false, message: "Server Error", data : error });
   }
 };
