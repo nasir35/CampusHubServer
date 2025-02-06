@@ -18,7 +18,7 @@ const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
 exports.createPost = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { author, content, image } = req.body;
-        if (!author || !content || !image) {
+        if (!author || !content) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
         const newPost = new Post_1.default({ author, content, image });

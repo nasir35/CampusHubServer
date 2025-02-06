@@ -6,7 +6,7 @@ import { ApiResponse } from "../types/response";
 export const createPost = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
   try {
     const { author, content, image } = req.body;
-    if (!author ||!content ||!image) {
+    if (!author ||!content) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
     const newPost = new Post({ author, content, image });
