@@ -87,7 +87,7 @@ export const getUserProfile = asyncHandler(async (req: Request, res: Response<Ap
   res.status(200).json({success:true, message:"user found successfully", data: user});
 });
 export const getUserById = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
-  const { userId } = req.query;
+  const userId = req.params.id;
 
   if (!userId) {
     return res.status(400).json({success:false,  message: "User Id is required" });

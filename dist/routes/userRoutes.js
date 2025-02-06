@@ -10,6 +10,7 @@ router.post("/register", userController_1.registerUser);
 router.post("/login", userController_1.loginUser);
 router.get("/", userController_1.getAllUsers);
 router.get("/profile", userController_1.getUserProfile);
+router.get("/:id", userController_1.getUserById);
 router.put("/:userId", userController_1.updateUserProfile);
 router.post("/follow/:currentUserId/:userToFollowId", userController_1.followUser);
 router.post("/unfollow/:currentUserId/:userToUnfollowId", userController_1.unfollowUser);

@@ -77,7 +77,7 @@ exports.getUserProfile = (0, asyncHandler_1.default)((req, res) => __awaiter(voi
     res.status(200).json({ success: true, message: "user found successfully", data: user });
 }));
 exports.getUserById = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.query;
+    const userId = req.params.id;
     if (!userId) {
         return res.status(400).json({ success: false, message: "User Id is required" });
     }
