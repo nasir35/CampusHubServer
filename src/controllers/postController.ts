@@ -29,7 +29,7 @@ export const getPosts = async (req: Request, res: Response<ApiResponse>) => {
 
 export const getPostDetails = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   try {
-    const post = await Post.findById(req.params.id).populate("user", ["name", "profilePic"]);
+    const post = await Post.findById(req.params.id).populate("author", ["name", "profilePic"]);
     if (!post) return res.status(404).json({success : false, message: "Post not found" });
 
     res.status(200).json({success : true, message: "Post found" , data: post});
