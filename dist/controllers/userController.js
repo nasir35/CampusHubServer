@@ -36,7 +36,8 @@ const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             profilePic,
         });
         yield user.save();
-        res.status(201).json({ success: true, message: "User registered successfully" });
+        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+        res.status(201).json({ success: true, message: "User registered successfully", data: { token, user } });
     }
     catch (error) {
         res.status(500).json({ success: false, message: "failed user registration", data: error });

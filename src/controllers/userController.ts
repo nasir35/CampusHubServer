@@ -20,30 +20,32 @@ interface RegisterUserRequest extends Request {
 }
 
 export const registerUser = async (req: RegisterUserRequest, res: Response<ApiResponse>): Promise<void> => {
-    try {
-        const { name, email, password, mobile, profilePic } = req.body;
+  try {
+    const { name, email, password, mobile, profilePic } = req.body;
 
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            res.status(400).json({success:false, message: "User already exists" });
-            return;
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user:IUser = new User({
-            name,
-            email,
-            password: hashedPassword,
-            mobile,
-            profilePic,
-        });
-        await user.save();
-
-        res.status(201).json({success:true, message: "User registered successfully" });
-    } catch (error) {
-        res.status(500).json({success : false, message : "failed user registration", data : error});
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      res.status(400).json({ success: false, message: "User already exists" });
+      return;
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user: IUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      mobile,
+      profilePic,
+    });
+    await user.save();
+
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(201).json({ success: true, message: "User registered successfully", data: { token, user } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "failed user registration", data: error });
+  }
 };
 
 export const loginUser = async (req: Request, res: Response<ApiResponse>): Promise<void> => {
