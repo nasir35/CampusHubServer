@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addComment = exports.likePost = exports.getPostDetails = exports.getPosts = exports.createPost = void 0;
+exports.updatePost = exports.addComment = exports.likePost = exports.getPostDetails = exports.getPosts = exports.createPost = void 0;
 const Post_1 = __importDefault(require("../models/Post"));
 const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
 exports.createPost = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -41,7 +41,7 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.getPosts = getPosts;
 const getPostDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const post = yield Post_1.default.findById(req.params.id).populate("user", ["name", "profilePic"]);
+        const post = yield Post_1.default.findById(req.params.id).populate("author", ["name", "profilePic"]);
         if (!post)
             return res.status(404).json({ success: false, message: "Post not found" });
         res.status(200).json({ success: true, message: "Post found", data: post });
@@ -87,3 +87,25 @@ const addComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.addComment = addComment;
+const updatePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const postId = req.params.id;
+    const { userId, update } = req.body;
+    try {
+        const post = yield Post_1.default.findById(postId);
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Post not found" });
+        }
+        if (userId.toString() !== post.author._id.toString()) {
+            return res.status(403).json({ success: false, message: "Unauthorized to update post" });
+        }
+        const updatedPost = yield Post_1.default.findByIdAndUpdate(postId, update, { new: true });
+        if (!updatedPost)
+            return res.status(404).json({ success: false, message: "Post not found" });
+        res.status(200).json({ success: true, message: "Post updated successfully", data: updatedPost });
+    }
+    catch (error) {
+        console.log("post update error", error);
+        res.status(500).json({ success: false, message: "Failed to update post" });
+    }
+});
+exports.updatePost = updatePost;

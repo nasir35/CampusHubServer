@@ -71,3 +71,24 @@ export const addComment = async (req: Request, res: Response<ApiResponse>): Prom
     res.status(500).json({success:false, message: "Server Error", data : error });
   }
 };
+
+export const updatePost = async (req:Request, res: Response<ApiResponse>) : Promise<any> => { 
+  const postId = req.params.id;
+  const { userId, update } = req.body;
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, message: "Post not found" });
+    }
+    if (userId.toString()!== post.author._id.toString()) {
+        return res.status(403).json({ success: false, message: "Unauthorized to update post" });
+    }
+    const updatedPost = await Post.findByIdAndUpdate(postId, update, { new: true });
+    if (!updatedPost) return res.status(404).json({ success: false, message: "Post not found" });
+    res.status(200).json({ success: true, message: "Post updated successfully", data: updatedPost });
+  }
+  catch (error) { 
+    console.log("post update error", error);
+    res.status(500).json({ success: false, message: "Failed to update post" });
+  }
+}
