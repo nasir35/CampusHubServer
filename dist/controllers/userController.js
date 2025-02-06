@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.getAllUsers = exports.unfollowUser = exports.followUser = exports.updateUserProfile = exports.getUserById = exports.getUserProfile = exports.loginUser = exports.registerUser = void 0;
+exports.deleteUser = exports.getAllUsers = exports.unfollowUser = exports.followUser = exports.updateUserProfile = exports.getMe = exports.getUserById = exports.getUserProfile = exports.loginUser = exports.registerUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const User_1 = require("../models/User");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -88,6 +88,22 @@ exports.getUserById = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0
     }
     res.status(200).json({ success: true, message: "user found successfully", data: user });
 }));
+const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+        const user = yield User_1.User.findById(req.user.id).select("-password");
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        res.status(200).json({ success: true, data: user });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+exports.getMe = getMe;
 exports.updateUserProfile = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
     const userData = req.body;

@@ -1,24 +1,24 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import {User, IUser } from "../models/User"; // Ensure correct path
 
-interface AuthRequest extends Request {
-  user?: IUser;
+const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
+
+export interface AuthRequest extends Request {
+  user?: { id: string; role: string };
 }
 
-export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticateUser = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Access denied. No token provided." });
+  }
+
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-      return res.status(401).json({ message: "Not authorized, no token" });
-    }
-
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET as string);
-    req.user = (await User.findById(decoded.id).select("-password")) as IUser;
-
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ message: "Not authorized, token failed" });
+    res.status(401).json({ success: false, message: "Invalid token." });
   }
 };

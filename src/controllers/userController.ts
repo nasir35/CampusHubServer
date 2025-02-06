@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import asyncHandler from "../middlewares/asyncHandler";
 import mongoose from "mongoose";
 import { ApiResponse } from "../types/response";
+import { AuthRequest } from "../middlewares/authMiddleware";
 
 const JWT_SECRET:string = process.env.JWT_SECRET || "secret";
 
@@ -102,6 +103,23 @@ export const getUserById = asyncHandler(async (req: Request, res: Response<ApiRe
 
   res.status(200).json({success:true, message:"user found successfully", data: user});
 });
+
+export const getMe = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 export const updateUserProfile = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
   const { userId } = req.params;
