@@ -97,7 +97,7 @@ const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
-        res.status(200).json({ success: true, data: user });
+        res.status(200).json({ success: true, message: "user found", data: user });
     }
     catch (error) {
         res.status(500).json({ success: false, message: "Server error" });
