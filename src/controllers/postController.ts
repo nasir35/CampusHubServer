@@ -19,7 +19,7 @@ export const createPost = asyncHandler(async (req: Request, res: Response<ApiRes
 
 export const getPosts = async (req: Request, res: Response<ApiResponse>) => {
   try {
-    const posts = await Post.find().populate("author", ["name", "profilePic"]).sort({ createdAt: -1 });
+    const posts = await Post.find().populate("author", "name profilePic").sort({ createdAt: -1 });
     res.status(200).json({success: true, message: `${posts.length} Posts found.`, data: posts});
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch posts" });
@@ -29,7 +29,13 @@ export const getPosts = async (req: Request, res: Response<ApiResponse>) => {
 
 export const getPostDetails = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   try {
-    const post = await Post.findById(req.params.id).populate("author", ["name", "profilePic"]);
+    const post = await Post.findById(req.params.id).populate("author", "name profilePic").populate({
+      path: "comments",populate: {
+       path: 'user',
+        model: 'User',
+       select: "name profilePic",
+     }
+    });
     if (!post) return res.status(404).json({success : false, message: "Post not found" });
 
     res.status(200).json({success : true, message: "Post found" , data: post});

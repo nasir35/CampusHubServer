@@ -10,18 +10,8 @@ import { AuthReq } from "../middlewares/authMiddleware";
 
 const JWT_SECRET:string = process.env.JWT_SECRET || "secret";
 
-// Register User
-interface RegisterUserRequest extends Request {
-    body: {
-        name: string;
-        email: string;
-        password: string;
-        mobile: string;
-        profilePic: string;
-    };
-}
 
-export const registerUser = async (req: RegisterUserRequest, res: Response<ApiResponse>): Promise<void> => {
+export const registerUser = async (req: Request, res: Response<ApiResponse>): Promise<void> => {
   try {
     const { name, email, password, mobile, profilePic } = req.body;
 

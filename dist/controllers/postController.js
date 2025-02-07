@@ -31,7 +31,7 @@ exports.createPost = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0,
 }));
 const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const posts = yield Post_1.default.find().populate("author", ["name", "profilePic"]).sort({ createdAt: -1 });
+        const posts = yield Post_1.default.find().populate("author", "name profilePic").sort({ createdAt: -1 });
         res.status(200).json({ success: true, message: `${posts.length} Posts found.`, data: posts });
     }
     catch (error) {
@@ -41,7 +41,13 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.getPosts = getPosts;
 const getPostDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const post = yield Post_1.default.findById(req.params.id).populate("author", ["name", "profilePic"]);
+        const post = yield Post_1.default.findById(req.params.id).populate("author", "name profilePic").populate({
+            path: "comments", populate: {
+                path: 'user',
+                model: 'User',
+                select: "name profilePic",
+            }
+        });
         if (!post)
             return res.status(404).json({ success: false, message: "Post not found" });
         res.status(200).json({ success: true, message: "Post found", data: post });
