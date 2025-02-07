@@ -3,13 +3,11 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key"; // Store securely
 
-declare module "express-serve-static-core" {
-  interface Request {
-    user?: { id: string; role: string };
-  }
+export interface AuthReq extends Request { 
+  user?: { id: string; role: string }; 
 }
 
-export const authenticateUser = (req: Request, res: Response, next: NextFunction) => {
+export const authenticateUser = (req: AuthReq, res: Response, next: NextFunction) => {
   const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {

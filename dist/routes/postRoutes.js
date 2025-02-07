@@ -9,7 +9,7 @@ const router = express_1.default.Router();
 router.post("/create", postController_1.createPost); //{ author, content, image }
 router.get("/", postController_1.getPosts);
 router.post("/like", postController_1.likePost); //{ postId, userId }
-router.get("/:id", postController_1.getPostDetails);
 router.post("/comment/:id", postController_1.addComment); //{ user, text }
 router.patch("/update/:id", postController_1.updatePost); //{ userId, update }
+router.get("/:id", postController_1.getPostDetails);
 exports.default = router;
