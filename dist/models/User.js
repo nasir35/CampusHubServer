@@ -40,7 +40,7 @@ const UserSchema = new mongoose_1.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     mobile: { type: String },
-    profilePic: { type: String },
+    profilePic: { type: String, default: "https://res.cloudinary.com/dax7yvopb/image/upload/v1738953944/user_dwpdoy.png" },
     education: {
         institute: { type: String },
         degree: { type: String },

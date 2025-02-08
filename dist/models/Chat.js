@@ -32,16 +32,29 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Chat = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+const Message_1 = require("./Message");
+// Chat schema definition
 const ChatSchema = new mongoose_1.Schema({
-    members: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" }], // Users in the chat
-    messages: [
-        {
-            sender: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User", required: true },
-            content: { type: String, required: true },
-            createdAt: { type: Date, default: Date.now },
-        },
-    ],
+    members: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: "User", required: true }],
 }, { timestamps: true });
-exports.default = mongoose_1.default.model("Chat", ChatSchema);
+// Optional method to get all messages for the chat (you can implement pagination if necessary)
+ChatSchema.methods.getMessages = function () {
+    return __awaiter(this, void 0, void 0, function* () {
+        const messages = yield Message_1.Message.find({ chatId: this._id }).sort({ createdAt: 1 });
+        return messages;
+    });
+};
+// Export the Chat model
+exports.Chat = mongoose_1.default.model("Chat", ChatSchema);

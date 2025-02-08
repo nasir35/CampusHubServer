@@ -33,15 +33,10 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Message = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-// Message schema definition
-const MessageSchema = new mongoose_1.Schema({
-    sender: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User", required: true },
-    content: { type: String, required: true },
-    chatId: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Chat", required: true },
-    readBy: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" }],
-}, { timestamps: true } // This will auto-create `createdAt` and `updatedAt` fields
-);
-// Export the model
-exports.Message = mongoose_1.default.model("Message", MessageSchema);
+const MemberSchema = new mongoose_1.Schema({
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+    role: { type: String, enum: ["admin", "moderator", "member"], default: "member" },
+}, { timestamps: true });
+const Member = mongoose_1.default.model("Member", MemberSchema);
+exports.default = Member;

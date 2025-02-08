@@ -12,6 +12,7 @@ const connectDB_1 = __importDefault(require("./utils/connectDB"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const postRoutes_1 = __importDefault(require("./routes/postRoutes"));
+const batchRoutes_1 = __importDefault(require("./routes/batchRoutes"));
 dotenv_1.default.config();
 (0, connectDB_1.default)();
 const app = (0, express_1.default)();
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", userRoutes_1.default);
 app.use("/api/chat", chatRoutes_1.default);
 app.use("/api/posts", postRoutes_1.default);
+app.use("/api/batches", batchRoutes_1.default);
 // WebSocket Setup
 const io = new socket_io_1.Server(server, {
     cors: {

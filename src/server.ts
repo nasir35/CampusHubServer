@@ -7,6 +7,7 @@ import connectDB from "./utils/connectDB";
 import userRoutes from "./routes/userRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import postRoutes from "./routes/postRoutes";
+import batchRoutes from "./routes/batchRoutes";
 
 dotenv.config();
 connectDB();
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/batches", batchRoutes);
 
 // WebSocket Setup
 const io = new Server(server, {

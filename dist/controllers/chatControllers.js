@@ -13,21 +13,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMessages = exports.sendMessage = exports.getUserChats = exports.createChat = void 0;
-const Chat_1 = __importDefault(require("../models/Chat"));
-const Message_1 = require("./../models/Message");
+const Chat_1 = require("../models/Chat");
+const Message_1 = require("../models/Message");
 const notificationController_1 = require("./notificationController");
 const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
+const User_1 = require("../models/User");
 // Create a chat between two users
 const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { senderId, receiverId } = req.body;
     try {
-        const existingChat = yield Chat_1.default.findOne({
+        // Check if a chat between these users already exists
+        const existingChat = yield Chat_1.Chat.findOne({
             members: { $all: [senderId, receiverId] },
         });
-        if (existingChat)
+        if (existingChat) {
             return res.status(200).json({ success: true, message: "Chat already exists", data: existingChat });
-        const newChat = new Chat_1.default({ members: [senderId, receiverId] });
+        }
+        // Create new chat document
+        const newChat = new Chat_1.Chat({ members: [senderId, receiverId] });
         yield newChat.save();
+        // Add chat reference to both users
+        yield User_1.User.findByIdAndUpdate(senderId, { $push: { chats: newChat._id } });
+        yield User_1.User.findByIdAndUpdate(receiverId, { $push: { chats: newChat._id } });
         res.status(201).json({ success: true, message: "Chat has been created", data: newChat });
     }
     catch (error) {
@@ -38,8 +45,8 @@ exports.createChat = createChat;
 // Get chats of a user
 const getUserChats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const chats = yield Chat_1.default.find({ members: req.params.userId });
-        return res.status(200).json({ success: true, message: "chat found", data: chats });
+        const chats = yield Chat_1.Chat.find({ members: req.params.userId });
+        return res.status(200).json({ success: true, message: "Chats found", data: chats });
     }
     catch (error) {
         return res.status(500).json({ success: false, message: "Error fetching chats" });
@@ -47,31 +54,22 @@ const getUserChats = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.getUserChats = getUserChats;
 // Send a message
-// export const sendMessage = async (req: Request, res: Response): Promise<any> => {
-//   const { chatId, senderId, text } = req.body;
-//   try {
-//     const message = new Message({ chatId, sender: senderId, text });
-//     await message.save();
-//     res.status(201).json(message);
-//   } catch (error) {
-//     res.status(500).json({ message: "Error sending message", error });
-//   }
-// };
-// Send a message and store it inside the Chat document
 exports.sendMessage = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { senderId, chatId, content } = req.body;
-    // Find the chat and add the new message to the messages array
-    const chat = yield Chat_1.default.findById(chatId);
+    // Find the chat
+    const chat = yield Chat_1.Chat.findById(chatId);
     if (!chat) {
         return res.status(404).json({ success: false, message: "Chat not found" });
     }
-    const newMessage = {
+    // Create the new message
+    const newMessage = new Message_1.Message({
         sender: senderId,
         content,
-        createdAt: new Date(),
-    };
-    chat.messages.push(newMessage); // Store message inside Chat document
-    yield chat.save();
+        chatId: chat._id,
+        readBy: [], // Initially no one has read the message
+    });
+    // Save the message in the Message collection
+    yield newMessage.save();
     // Notify chat participants (excluding the sender)
     chat.members.forEach((participant) => __awaiter(void 0, void 0, void 0, function* () {
         if (participant.toString() !== senderId.toString()) {
@@ -79,13 +77,13 @@ exports.sendMessage = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0
             );
         }
     }));
-    res.status(201).json({ success: true, message: "message sent successfully", data: newMessage });
+    res.status(201).json({ success: true, message: "Message sent successfully", data: newMessage });
 }));
 // Get messages of a chat
 const getMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const messages = yield Message_1.Message.find({ chatId: req.params.chatId });
-        res.status(200).json({ success: true, message: "message got successfully", data: messages });
+        const messages = yield Message_1.Message.find({ chatId: req.params.chatId }).sort({ createdAt: 1 });
+        res.status(200).json({ success: true, message: "Messages fetched successfully", data: messages });
     }
     catch (error) {
         res.status(500).json({ success: false, message: "Error fetching messages" });

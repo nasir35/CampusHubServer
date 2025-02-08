@@ -1,146 +1,87 @@
 "use strict";
-// import mongoose, { Schema, Document } from "mongoose";
-// import crypto from "crypto"; // Import crypto for unique ID generation
-// import Routine, { IRoutine } from "./Routine";
-// // Function to generate an 8-character alphanumeric code
-// const generateUniqueCode = () => {
-//   return crypto.randomBytes(4).toString("hex").toUpperCase(); // Generates 8-character unique string
-// };
-// // Interface for Upcoming Classes
-// interface IClass {
-//   title: string;
-//   description?: string;
-//   date: Date;
-//   link?: string; // Optional link for online classes
-// }
-// // Interface for Members
-// interface IMember {
-//   userId: mongoose.Types.ObjectId;
-//   role: "admin" | "moderator" | "member"; // Define roles for batch members
-// }
-// // Interface for Announcements
-// interface IAnnouncement {
-//   message: string;
-//   createdAt: Date;
-// }
-// // Interface for Resources
-// interface IResource {
-//   title: string;
-//   url: string;
-//   uploadedBy: mongoose.Types.ObjectId;
-//   uploadedAt: Date;
-// }
-// // Define Batch Interface
-// export interface IBatch extends Document {
-//   name: string;
-//   code: string;
-//   institute : string;
-//   description?: string;
-//   createdBy: mongoose.Types.ObjectId;
-//   batchType: "public" | "private";
-//   profilePic?: string;
-//   routines: IRoutine[]; // Define array for routines
-//   upcomingClasses: IClass[];
-//   membersList: IMember[];
-//   announcements: IAnnouncement[];
-//   resources: IResource[];
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
-// // Define Schema
-// const BatchSchema = new Schema<IBatch>(
-//   {
-//     name: { type: String, required: true },
-//     code: { type: String, required: true, unique: true },
-//     description: { type: String },
-//     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-//     batchType: { type: String, enum: ["public", "private"], default: "public" },
-//     profilePic: { type: String },
-//     routines: []
-//     // Upcoming Classes
-//     upcomingClasses: [
-//       {
-//         subject: { type: String, required: true },
-//         Teacher: { type: String },
-//         date: { type: Date, required: true },
-//         link: { type: String },
-//       },
-//     ],
-//     // Members List
-//     membersList: [
-//       {
-//         userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-//         role: { type: String, enum: ["admin", "moderator", "member"], default: "member" },
-//       },
-//     ],
-//     // Announcements
-//     announcements: [
-//       {
-//         message: { type: String, required: true },
-//         createdAt: { type: Date, default: Date.now },
-//       },
-//     ],
-//     // Resources
-//     resources: [
-//       {
-//         title: { type: String, required: true },
-//         url: { type: String, required: true },
-//         uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-//         uploadedAt: { type: Date, default: Date.now },
-//       },
-//     ],
-//   },
-//   { timestamps: true } // Automatically adds createdAt & updatedAt
-// );
-// BatchSchema.methods.getTodayClasses = function () {
-//   const today = new Date().toLocaleString("en-US", { weekday: "long" }); // Get current day name
-//   const currentRoutine: IRoutine | null = await Routine.findOne({
-//     _id: this.currentRoutineId,
-//   });
-//   if (!currentRoutine) return [];
-//   return currentRoutine.schedule.filter((cls) => cls.days.includes(today));
-// };
-// BatchSchema.methods.modifyTodaySchedule = function (action, subjectData) {
-//   const today = new Date().toLocaleString("en-US", { weekday: "long" });
-//   const currentRoutine = this.routines.find(
-//     (routine) => routine._id.toString() === this.currentRoutineId?.toString()
-//   );
-//   if (!currentRoutine) return { success: false, message: "No active routine found" };
-//   switch (action) {
-//     case "add":
-//       currentRoutine.schedule.push(subjectData);
-//       break;
-//     case "delete":
-//       currentRoutine.schedule = currentRoutine.schedule.filter(
-//         (cls) => cls.subject !== subjectData.subject || !cls.days.includes(today)
-//       );
-//       break;
-//     case "reschedule":
-//       const classToUpdate = currentRoutine.schedule.find(
-//         (cls) => cls.subject === subjectData.subject && cls.days.includes(today)
-//       );
-//       if (classToUpdate) {
-//         classToUpdate.time = subjectData.newTime;
-//       }
-//       break;
-//     case "cancel":
-//       currentRoutine.schedule = currentRoutine.schedule.map((cls) => {
-//         if (cls.subject === subjectData.subject && cls.days.includes(today)) {
-//           return { ...cls, canceled: true };
-//         }
-//         return cls;
-//       });
-//       break;
-//   }
-//    return { success: true, message: `Subject ${action}d successfully` };
-// };
-// BatchSchema.pre("save", async function (next) {
-//   const batch = this as IBatch;
-//   while (await mongoose.models.Batch.findOne({ code: batch.code })) {
-//     batch.code = generateUniqueCode(); // Regenerate if not unique
-//   }
-//   next();
-// });
-// // Export Model
-// const Batch = mongoose.model<IBatch>("Batch", BatchSchema);
-// export default Batch;
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const mongoose_1 = __importStar(require("mongoose"));
+const Schedule_1 = require("./Schedule");
+const crypto_1 = __importDefault(require("crypto"));
+// Function to generate an 8-character alphanumeric code
+const generateUniqueCode = () => {
+    return crypto_1.default.randomBytes(4).toString("hex").toUpperCase(); // Generates 8-character unique string
+};
+// Define Schema
+const BatchSchema = new mongoose_1.Schema({
+    name: { type: String, required: true },
+    code: { type: String, required: true, unique: true },
+    institute: { type: String, required: true },
+    description: { type: String },
+    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+    batchType: { type: String, enum: ["public", "private"], default: "public" },
+    profilePic: { type: String },
+    // Relationships
+    routines: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" }],
+    currentRoutineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" },
+    upcomingClasses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Schedule" }],
+    membersList: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Member" }],
+    announcements: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Announcement" }],
+    resources: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Resource" }],
+}, { timestamps: true });
+// Attach Methods
+BatchSchema.methods.getTodayClasses = Schedule_1.getTodayClasses;
+BatchSchema.methods.modifyTodaySchedule = Schedule_1.modifyTodayScheduleController;
+// Pre-save Hook for Unique Code
+BatchSchema.pre("save", function (next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const batch = this;
+        while (yield mongoose_1.default.models.Batch.findOne({ code: batch.code })) {
+            batch.code = generateUniqueCode(); // Regenerate if not unique
+        }
+        next();
+    });
+});
+// Export Model
+const Batch = mongoose_1.default.model("Batch", BatchSchema);
+exports.default = Batch;

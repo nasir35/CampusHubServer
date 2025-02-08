@@ -12,17 +12,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updatePost = exports.addComment = exports.likePost = exports.getPostDetails = exports.getPosts = exports.createPost = void 0;
+exports.deletePost = exports.updatePost = exports.addComment = exports.likePost = exports.getPostDetails = exports.getPosts = exports.createPost = void 0;
 const Post_1 = __importDefault(require("../models/Post"));
 const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
+const User_1 = require("../models/User");
 exports.createPost = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { author, content, image } = req.body;
         if (!author || !content) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
+        const user = yield User_1.User.findById(author);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
         const newPost = new Post_1.default({ author, content, image });
         yield newPost.save();
+        user.posts.push(newPost._id);
+        yield user.save();
         res.status(201).json({ success: true, message: "Post Created Successfully!", data: newPost });
     }
     catch (error) {
@@ -60,12 +67,15 @@ exports.getPostDetails = getPostDetails;
 const likePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { postId, userId } = req.body;
+        if (!postId || !userId) {
+            return res.status(400).json({ success: false, message: "postId & userId are required!" }); // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not, return error message.  // Check if postId and userId are provided. If not
+        }
         const post = yield Post_1.default.findById(postId);
         if (!post)
             return res.status(404).json({ success: false, message: "Post not found" });
         const alreadyLiked = post.likes.includes(userId);
         if (alreadyLiked) {
-            post.likes = post.likes.filter((id) => id.toString() !== userId);
+            post.likes = post.likes.filter((id) => (id != null || (id === null || id === void 0 ? void 0 : id.toString()) !== userId));
         }
         else {
             post.likes.push(userId);
@@ -115,3 +125,23 @@ const updatePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.updatePost = updatePost;
+// write post delete controller
+const deletePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const postId = req.params.postId;
+        const authorId = req.body.authorId;
+        const userId = req.body.userId;
+        const user = yield User_1.User.findById(userId);
+        if (authorId !== userId) {
+            return res.status(403).json({ success: false, message: "Unauthorized to delete post" });
+        }
+        const response = yield Post_1.default.findOneAndDelete({ _id: postId });
+        user.posts = user.posts.filter((id) => id !== postId);
+        user.save();
+        return res.status(200).json({ success: true, message: "Post Delete Success" });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, message: "Couldn't delete post" });
+    }
+});
+exports.deletePost = deletePost;
