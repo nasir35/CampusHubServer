@@ -9,5 +9,5 @@ router.post("/like", likePost); //{ postId, userId }
 router.post("/comment/:id", addComment); //{ user, text }
 router.patch("/update/:id", updatePost); //{ userId, update }
 router.get("/:id", getPostDetails); 
-router.delete("/delete/:postId", deletePost);
+router.delete("/delete/:postId", deletePost); //{ authorId, userId }
 export default router;

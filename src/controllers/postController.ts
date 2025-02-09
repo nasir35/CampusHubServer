@@ -114,8 +114,7 @@ export const updatePost = async (req:Request, res: Response<ApiResponse>) : Prom
 export const deletePost = async (req: Request, res: Response<ApiResponse>): Promise<any> => { 
   try {
     const postId = req.params.postId;
-    const authorId = req.body.authorId;
-    const userId = req.body.userId;
+    const { authorId, userId } = req.body;  
     const user:any = await User.findById(userId);
     if (authorId !== userId) {
       return res.status(403).json({ success: false, message: "Unauthorized to delete post" });
