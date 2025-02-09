@@ -129,15 +129,21 @@ exports.updatePost = updatePost;
 const deletePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const postId = req.params.postId;
-        const authorId = req.body.authorId;
-        const userId = req.body.userId;
+        const { authorId, userId } = req.body;
         const user = yield User_1.User.findById(userId);
-        if (authorId !== userId) {
+        const author = yield User_1.User.findById(authorId);
+        if (user.role !== "Admin" && authorId !== userId) {
             return res.status(403).json({ success: false, message: "Unauthorized to delete post" });
         }
         const response = yield Post_1.default.findOneAndDelete({ _id: postId });
-        user.posts = user.posts.filter((id) => id !== postId);
-        user.save();
+        if (user.role === "Admin" && authorId !== userId) {
+            author.posts = author.posts.filter((id) => id.toString() !== postId.toString());
+            author.save();
+        }
+        else {
+            user.posts = user.posts.filter((id) => id !== postId);
+            user.save();
+        }
         return res.status(200).json({ success: true, message: "Post Delete Success" });
     }
     catch (error) {

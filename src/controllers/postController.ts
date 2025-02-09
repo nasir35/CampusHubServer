@@ -115,14 +115,21 @@ export const deletePost = async (req: Request, res: Response<ApiResponse>): Prom
   try {
     const postId = req.params.postId;
     const { authorId, userId } = req.body;  
-    const user:any = await User.findById(userId);
-    if (authorId !== userId) {
+    const user: any = await User.findById(userId);
+    const author : any = await User.findById(authorId);
+    if (user.role !== "Admin" && authorId !== userId ) {
       return res.status(403).json({ success: false, message: "Unauthorized to delete post" });
     }
 
     const response = await Post.findOneAndDelete({ _id: postId });
-    user.posts = user.posts.filter((id:any) => id !== postId);
-    user.save();
+    if (user.role === "Admin" && authorId !== userId) {
+      author.posts = author.posts.filter((id: any) => id.toString() !== postId.toString());
+      author.save();
+    }
+    else {      
+      user.posts = user.posts.filter((id:any) => id !== postId);
+      user.save();
+    }
     return res.status(200).json({ success: true, message: "Post Delete Success" });
   } catch (error) {
     return res.status(500).json({success: false, message:"Couldn't delete post"})

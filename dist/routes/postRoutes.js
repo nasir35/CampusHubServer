@@ -12,5 +12,5 @@ router.post("/like", postController_1.likePost); //{ postId, userId }
 router.post("/comment/:id", postController_1.addComment); //{ user, text }
 router.patch("/update/:id", postController_1.updatePost); //{ userId, update }
 router.get("/:id", postController_1.getPostDetails);
-router.delete("/delete/:postId", postController_1.deletePost);
+router.delete("/delete/:postId", postController_1.deletePost); //{ authorId, userId }
 exports.default = router;
