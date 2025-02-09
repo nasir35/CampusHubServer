@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { AuthReq } from "./authMiddleware";
-import Batch from "../models/Batch/Batch";
+import {Batch} from "../models/Batch/Batch";
 
 export const authorizeBatchAdmin = async (req: AuthReq, res: Response, next: NextFunction):Promise<any> => {
   try {

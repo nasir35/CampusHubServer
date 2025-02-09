@@ -1,5 +1,5 @@
 import { AuthReq } from "../../middlewares/authMiddleware";
-import Batch from "./Batch";
+import {Batch} from "./Batch";
 import { ISchedule } from "./Routine";
 import { Request, Response } from "express";
 
@@ -26,7 +26,7 @@ export const modifyTodayScheduleController = async (req: AuthReq, res: Response)
     };
 
     if (!action || !subjectData) {
-      return res.status(400).json({ success: false, message: "Action and subjectData are required" });
+      return res.status(400).json({ success: false, message: "Action and subject Data are required" });
     }
 
     const batch = await Batch.findById(batchId);

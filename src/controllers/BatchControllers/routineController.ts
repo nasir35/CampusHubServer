@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AuthReq } from "../../middlewares/authMiddleware";
-import Batch from "../../models/Batch/Batch";
+import {Batch} from "../../models/Batch/Batch";
 import { Types } from "mongoose";
 
 // Set a new routine and make it active

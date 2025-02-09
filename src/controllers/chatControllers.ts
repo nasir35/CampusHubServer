@@ -5,14 +5,19 @@ import { createNotification } from "./notificationController";
 import asyncHandler from "../middlewares/asyncHandler";
 import { ApiResponse } from "../types/response";
 import { User } from "../models/User";
+import {findChatBetweenUsers} from "../utils/findChatBetweenUsers"
 
-// Create a chat between two users
-export const createChat = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
+export const createBinaryChat = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   const { senderId, receiverId } = req.body;
 
+  if (!senderId || !receiverId) {
+    return res.status(400).json({ success: false, message: "Both senderId and receiverId are required." });
+  }
+
   try {
-    // Check if a chat between these users already exists
+    // Check if a binary chat already exists
     const existingChat = await Chat.findOne({
+      isGroup: false,
       members: { $all: [senderId, receiverId] },
     });
 
@@ -20,20 +25,73 @@ export const createChat = async (req: Request, res: Response<ApiResponse>): Prom
       return res.status(200).json({ success: true, message: "Chat already exists", data: existingChat });
     }
 
-    // Create new chat document
-    const newChat = new Chat({ members: [senderId, receiverId] });
+    // Create new binary chat
+    const newChat = new Chat({ isGroup: false, members: [senderId, receiverId] });
     await newChat.save();
 
     // Add chat reference to both users
     await User.findByIdAndUpdate(senderId, { $push: { chats: newChat._id } });
     await User.findByIdAndUpdate(receiverId, { $push: { chats: newChat._id } });
 
-    res.status(201).json({ success: true, message: "Chat has been created", data: newChat });
+    res.status(201).json({ success: true, message: "Binary Chat created", data: newChat });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error creating chat", data: error });
   }
 };
 
+export const createBatchChat = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
+  const { name, creatorId } = req.body;
+
+  if (!name || !creatorId) {
+    return res.status(400).json({ success: false, message: "Group chat must have a name!" });
+  }
+
+  try {
+    let members:any = [];
+    // Add creator to the members list
+    if (!members.includes(creatorId)) {
+      members.push(creatorId);
+    }
+
+    // Create new group chat
+    const newChat = new Chat({ isGroup: true, name, members });
+    await newChat.save();
+
+    // Add chat reference to all members
+    await User.updateMany({ _id: { $in: members } }, { $push: { chats: newChat._id } });
+
+    res.status(201).json({ success: true, message: "Group Chat created", data: newChat });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error creating group chat", data: error });
+  }
+};
+
+
+
+export const findChatId = async (req: Request, res: Response<ApiResponse>): Promise<any> => { 
+  try {
+    const { senderId, receiverId } = req.body;
+     const existingChat = await findChatBetweenUsers(senderId, receiverId);
+
+     if (!existingChat) {
+       return res.status(404).json({ success: false, message: "Chat doesn't exists" });
+    }
+    return res.status(200).json({ success: true, message: "ChatId found successfully.", data: existingChat._id });
+  }
+  catch (err) {
+    return res.status(500).json({ success: false, message: "ChatId fetching error!" });
+  }
+}
+
+export const getAllchats = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
+  try {
+    const chats = await Chat.find().sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, message: `${chats.length} Chats founds.`, data: chats });
+  }
+  catch (err) {
+    return res.status(500).json({success:false, message: "Chats fetching error!"})
+  }
+}
 
 // Get chats of a user
 export const getUserChats = async (req: Request, res: Response<ApiResponse>): Promise<any> => {

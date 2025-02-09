@@ -153,8 +153,8 @@ const unfollowUser = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const currentUser = yield User_1.User.findById(req.params.currentUserId);
         if (!userToUnfollow || !currentUser)
             return res.status(404).json({ success: false, message: "User not found" });
-        currentUser.following = currentUser.following.filter((id) => id.toString() !== userToUnfollow._id);
-        userToUnfollow.followers = userToUnfollow.followers.filter((id) => id.toString() !== currentUser._id);
+        currentUser.following = currentUser.following.filter((id) => id.toString() !== userToUnfollow._id.toString());
+        userToUnfollow.followers = userToUnfollow.followers.filter((id) => id.toString() !== currentUser._id.toString());
         yield currentUser.save();
         yield userToUnfollow.save();
         res.status(200).json({ success: true, message: "User unfollowed" });

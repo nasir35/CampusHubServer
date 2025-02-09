@@ -8,13 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.modifyTodayScheduleController = void 0;
 exports.getTodayClasses = getTodayClasses;
-const Batch_1 = __importDefault(require("./Batch"));
+const Batch_1 = require("./Batch");
 // **Get Today's Schedule**
 function getTodayClasses() {
     const today = new Date().toLocaleString("en-US", { weekday: "long" });
@@ -32,9 +29,9 @@ const modifyTodayScheduleController = (req, res) => __awaiter(void 0, void 0, vo
         const { batchId } = req.params;
         const { action, subjectData } = req.body;
         if (!action || !subjectData) {
-            return res.status(400).json({ success: false, message: "Action and subjectData are required" });
+            return res.status(400).json({ success: false, message: "Action and subject Data are required" });
         }
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }

@@ -41,26 +41,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Batch = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const Schedule_1 = require("./Schedule");
-const crypto_1 = __importDefault(require("crypto"));
-// Function to generate an 8-character alphanumeric code
-const generateUniqueCode = () => {
-    return crypto_1.default.randomBytes(4).toString("hex").toUpperCase(); // Generates 8-character unique string
-};
+const helper_1 = require("../../utils/helper");
 // Define Schema
 const BatchSchema = new mongoose_1.Schema({
-    name: { type: String, required: true },
-    code: { type: String, required: true, unique: true },
+    batchName: { type: String, required: true },
+    batchCode: { type: String, required: true },
     institute: { type: String, required: true },
     description: { type: String },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    batchType: { type: String, enum: ["public", "private"], default: "public" },
-    profilePic: { type: String },
+    batchType: { type: String, enum: ["Public", "Private"], default: "Public" },
+    batchPic: { type: String, default: "https://res.cloudinary.com/dax7yvopb/image/upload/v1739021465/group_d5hhyk.png" },
     // Relationships
     routines: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" }],
     currentRoutineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" },
@@ -69,19 +63,21 @@ const BatchSchema = new mongoose_1.Schema({
     announcements: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Announcement" }],
     resources: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Resource" }],
 }, { timestamps: true });
-// Attach Methods
-BatchSchema.methods.getTodayClasses = Schedule_1.getTodayClasses;
-BatchSchema.methods.modifyTodaySchedule = Schedule_1.modifyTodayScheduleController;
 // Pre-save Hook for Unique Code
 BatchSchema.pre("save", function (next) {
     return __awaiter(this, void 0, void 0, function* () {
         const batch = this;
-        while (yield mongoose_1.default.models.Batch.findOne({ code: batch.code })) {
-            batch.code = generateUniqueCode(); // Regenerate if not unique
+        if (!batch.batchCode) {
+            batch.batchCode = (0, helper_1.generateUniqueCode)();
+        }
+        while (yield mongoose_1.default.models.Batch.findOne({ batchCode: batch.batchCode })) {
+            batch.batchCode = (0, helper_1.generateUniqueCode)();
         }
         next();
     });
 });
+// Attach Methods
+BatchSchema.methods.getTodayClasses = Schedule_1.getTodayClasses;
+BatchSchema.methods.modifyTodaySchedule = Schedule_1.modifyTodayScheduleController;
 // Export Model
-const Batch = mongoose_1.default.model("Batch", BatchSchema);
-exports.default = Batch;
+exports.Batch = mongoose_1.default.model("Batch", BatchSchema);

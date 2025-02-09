@@ -168,14 +168,13 @@ export const followUser = async (req: Request, res: Response<ApiResponse>):Promi
 // Unfollow a User
 export const unfollowUser = async (req: Request, res: Response<ApiResponse>) : Promise<any> => {
   try {
-    const userToUnfollow = await User.findById(req.params.userToUnfollowId);
-    const currentUser = await User.findById(req.params.currentUserId);
+    const userToUnfollow:any = await User.findById(req.params.userToUnfollowId);
+    const currentUser:any = await User.findById(req.params.currentUserId);
 
     if (!userToUnfollow || !currentUser) return res.status(404).json({success:false, message: "User not found" });
 
-    currentUser.following = currentUser.following.filter((id) => id.toString() !== userToUnfollow._id);
-    userToUnfollow.followers = userToUnfollow.followers.filter((id) => id.toString() !== currentUser._id);
-
+    currentUser.following = currentUser.following.filter((id:any) => id.toString() !== userToUnfollow._id.toString());
+    userToUnfollow.followers = userToUnfollow.followers.filter((id: any) => id.toString() !== currentUser._id.toString());
     await currentUser.save();
     await userToUnfollow.save();
 

@@ -8,18 +8,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.modifySchedule = exports.getTodaySchedule = exports.setActiveRoutine = void 0;
-const Batch_1 = __importDefault(require("../../models/Batch/Batch"));
+const Batch_1 = require("../../models/Batch/Batch");
 const mongoose_1 = require("mongoose");
 // Set a new routine and make it active
 const setActiveRoutine = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { batchId, routineId } = req.params;
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch)
             return res.status(404).json({ success: false, message: "Batch not found" });
         if (!batch.routines.some((r) => r.toString() === routineId)) {
@@ -38,7 +35,7 @@ exports.setActiveRoutine = setActiveRoutine;
 const getTodaySchedule = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { batchId } = req.params;
-        const batch = yield Batch_1.default.findById(batchId).populate("routines");
+        const batch = yield Batch_1.Batch.findById(batchId).populate("routines");
         if (!batch)
             return res.status(404).json({ success: false, message: "Batch not found" });
         const todayClasses = batch.getTodayClasses();
@@ -54,7 +51,7 @@ const modifySchedule = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const { batchId } = req.params;
         const { action, subject, newTime } = req.body;
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch)
             return res.status(404).json({ success: false, message: "Batch not found" });
         const result = batch.modifyTodaySchedule(action, { subject, newTime });

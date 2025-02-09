@@ -1,31 +1,59 @@
 import { Request, Response } from "express";
 import mongoose, { Types } from "mongoose";
 import { AuthReq } from "../../middlewares/authMiddleware";
-import Batch, { IBatch } from "../../models/Batch/Batch";
-import { IMember } from "../../models/Batch/Member";
+import {Batch } from "../../models/Batch/Batch";
+import Member, { IMember } from "../../models/Batch/Member";
+import { Chat } from "../../models/Chat";
+import { User } from "../../models/User";
+import { generateUniqueCode } from "../../utils/helper";
 
 // Create a new batch
 export const createBatch = async (req: AuthReq, res: Response):Promise<any> => {
   try {
-    const { name, description, batchType, institute, profilePic } = req.body;
+    const { batchName, description, batchType, institute, batchPic } = req.body;
     if (!req.user) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     const createdBy = req.user.id;
+    const admin = new Member({
+      userId: createdBy,
+      role: "admin",
+    });
     const newBatch = new Batch({
-      name,
+      batchName,
       description,
       batchType,
       institute,
-      profilePic,
+      batchPic,
       createdBy,
-      membersList: [{ userId: createdBy, role: "admin" }],
+      membersList: [admin._id],
     });
-
+    if (!newBatch.batchCode) {
+      newBatch.batchCode = generateUniqueCode();
+      }
+      while (await mongoose.models.Batch.findOne({ batchCode: newBatch.batchCode })) {
+        newBatch.batchCode = generateUniqueCode();
+      }
     await newBatch.save();
+    //create new batch chat 
+    let members:any = [];
+    // Add creator to the members list
+    if (!members.includes(createdBy)) {
+      members.push(createdBy);
+    }
+
+    // Create new group chat
+    console.log("batch saved")
+    const newChat = new Chat({ isGroup: true, name : batchName, members });
+    const resp = await newChat.save();
+    console.log("new chat saved", resp)
+
+    // Add chat reference to all members
+    await User.updateMany({ _id: { $in: members } }, { $push: { chats: newChat._id } });    
+
     res.status(201).json({ success: true, message: "Batch created successfully", data: newBatch });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error", error });
   }
 };
 
@@ -66,7 +94,7 @@ export const joinBatch = async (req: AuthReq, res: Response): Promise<any> => {
     }
 
     const userId = req.user.id;
-    const batch = await Batch.findOne({ code: batchCode });
+    const batch = await Batch.findOne({batchCode });
 
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
@@ -156,7 +184,7 @@ export const updateBatch = async (req: AuthReq, res: Response): Promise<any> => 
     }
 
     const { batchId } = req.params;
-    const updateData = req.body; // Accept dynamic fields
+    const {updateData} = req.body; // Accept dynamic fields
     const userId = req.user.id;
 
     const batch = await Batch.findById(batchId);
@@ -213,7 +241,8 @@ export const addMember = async (req: AuthReq, res: Response):Promise<any> => {
 // Remove a member from the batch (only admins)
 export const removeMember = async (req: AuthReq, res: Response): Promise<any> => {
   try {
-    const { batchId, memberId } = req.params;
+    const { batchId } = req.params;
+    const { memberId } = req.body;
 
     if (!req.user) {
       return res.status(401).json({ success: false, message: "Unauthorized" });

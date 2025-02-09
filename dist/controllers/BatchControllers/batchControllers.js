@@ -14,36 +14,63 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeMember = exports.addMember = exports.updateBatch = exports.deleteBatch = exports.leaveBatch = exports.joinBatch = exports.getBatchById = exports.getBatches = exports.createBatch = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
-const Batch_1 = __importDefault(require("../../models/Batch/Batch"));
+const Batch_1 = require("../../models/Batch/Batch");
+const Member_1 = __importDefault(require("../../models/Batch/Member"));
+const Chat_1 = require("../../models/Chat");
+const User_1 = require("../../models/User");
+const helper_1 = require("../../utils/helper");
 // Create a new batch
 const createBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, description, batchType, institute, profilePic } = req.body;
+        const { batchName, description, batchType, institute, batchPic } = req.body;
         if (!req.user) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const createdBy = req.user.id;
-        const newBatch = new Batch_1.default({
-            name,
+        const admin = new Member_1.default({
+            userId: createdBy,
+            role: "admin",
+        });
+        const newBatch = new Batch_1.Batch({
+            batchName,
             description,
             batchType,
             institute,
-            profilePic,
+            batchPic,
             createdBy,
-            membersList: [{ userId: createdBy, role: "admin" }],
+            membersList: [admin._id],
         });
+        if (!newBatch.batchCode) {
+            newBatch.batchCode = (0, helper_1.generateUniqueCode)();
+        }
+        while (yield mongoose_1.default.models.Batch.findOne({ batchCode: newBatch.batchCode })) {
+            newBatch.batchCode = (0, helper_1.generateUniqueCode)();
+        }
         yield newBatch.save();
+        //create new batch chat 
+        let members = [];
+        // Add creator to the members list
+        if (!members.includes(createdBy)) {
+            members.push(createdBy);
+        }
+        // Create new group chat
+        console.log("batch saved");
+        const newChat = new Chat_1.Chat({ isGroup: true, name: batchName, members });
+        const resp = yield newChat.save();
+        console.log("new chat saved", resp);
+        // Add chat reference to all members
+        yield User_1.User.updateMany({ _id: { $in: members } }, { $push: { chats: newChat._id } });
         res.status(201).json({ success: true, message: "Batch created successfully", data: newBatch });
     }
     catch (error) {
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", error });
     }
 });
 exports.createBatch = createBatch;
 // Get all batches
 const getBatches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const batches = yield Batch_1.default.find().populate("createdBy", "name email");
+        const batches = yield Batch_1.Batch.find().populate("createdBy", "name email");
         res.status(200).json({ success: true, message: `Found ${batches.length} Batches.`, data: batches });
     }
     catch (error) {
@@ -58,7 +85,7 @@ const getBatchById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!mongoose_1.default.Types.ObjectId.isValid(batchId)) {
             return res.status(400).json({ success: false, message: "Invalid Batch ID" });
         }
-        const batch = yield Batch_1.default.findById(batchId).populate("createdBy", "name email");
+        const batch = yield Batch_1.Batch.findById(batchId).populate("createdBy", "name email");
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
@@ -76,7 +103,7 @@ const joinBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const userId = req.user.id;
-        const batch = yield Batch_1.default.findOne({ code: batchCode });
+        const batch = yield Batch_1.Batch.findOne({ batchCode });
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
@@ -113,7 +140,7 @@ const leaveBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const userId = req.user.id;
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
@@ -134,14 +161,14 @@ const deleteBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const userId = req.user.id;
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
         if (batch.createdBy.toString() !== userId) {
             return res.status(403).json({ success: false, message: "Not authorized" });
         }
-        yield Batch_1.default.findByIdAndDelete(batchId);
+        yield Batch_1.Batch.findByIdAndDelete(batchId);
         res.status(200).json({ success: true, message: "Batch deleted successfully" });
     }
     catch (error) {
@@ -155,9 +182,9 @@ const updateBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const { batchId } = req.params;
-        const updateData = req.body; // Accept dynamic fields
+        const { updateData } = req.body; // Accept dynamic fields
         const userId = req.user.id;
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
@@ -167,7 +194,7 @@ const updateBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(403).json({ success: false, message: "Forbidden: Admin or Moderator access required" });
         }
         // Perform update using $set
-        const updatedBatch = yield Batch_1.default.findByIdAndUpdate(batchId, { $set: updateData }, { new: true, upsert: true });
+        const updatedBatch = yield Batch_1.Batch.findByIdAndUpdate(batchId, { $set: updateData }, { new: true, upsert: true });
         res.status(200).json({ success: true, message: "Batch updated successfully", data: updatedBatch });
     }
     catch (error) {
@@ -184,7 +211,7 @@ const addMember = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!req.user) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
@@ -205,11 +232,12 @@ exports.addMember = addMember;
 // Remove a member from the batch (only admins)
 const removeMember = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { batchId, memberId } = req.params;
+        const { batchId } = req.params;
+        const { memberId } = req.body;
         if (!req.user) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }

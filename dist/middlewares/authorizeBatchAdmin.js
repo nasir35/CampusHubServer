@@ -8,12 +8,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authorizeBatchAdmin = void 0;
-const Batch_1 = __importDefault(require("../models/Batch/Batch"));
+const Batch_1 = require("../models/Batch/Batch");
 const authorizeBatchAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!req.user) {
@@ -21,7 +18,7 @@ const authorizeBatchAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
         }
         const { batchId } = req.params; // Get batchId from request params
         const userId = req.user.id;
-        const batch = yield Batch_1.default.findById(batchId);
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }

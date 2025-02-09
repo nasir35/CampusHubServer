@@ -4,23 +4,17 @@ import { modifyTodayScheduleController, getTodayClasses } from "./Schedule";
 import { IMember } from "./Member";
 import { IAnnouncement } from "./Announcement";
 import { IResource } from "./Resources";
-import crypto from "crypto";
-
-// Function to generate an 8-character alphanumeric code
-const generateUniqueCode = (): string => {
-  return crypto.randomBytes(4).toString("hex").toUpperCase(); // Generates 8-character unique string
-};
-
+import { generateUniqueCode } from "../../utils/helper";
 
 // Define Batch Interface
 export interface IBatch extends Document {
-  name: string;
-  code: string;
+  batchName: string;
+  batchCode: string;
   institute: string;
   description?: string;
   createdBy: Types.ObjectId;
-  batchType: "public" | "private";
-  profilePic?: string;
+  batchType: "Public" | "Private";
+  batchPic?: string;
   routines: IRoutine[];
   currentRoutineId: Types.ObjectId;
   upcomingClasses: ISchedule[];
@@ -36,13 +30,13 @@ export interface IBatch extends Document {
 // Define Schema
 const BatchSchema = new Schema<IBatch>(
   {
-    name: { type: String, required: true },
-    code: { type: String, required: true, unique: true },
+    batchName: { type: String, required: true },
+    batchCode: { type: String, required: true},
     institute: { type: String, required: true },
     description: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    batchType: { type: String, enum: ["public", "private"], default: "public" },
-    profilePic: { type: String },
+    batchType: { type: String, enum: ["Public", "Private"], default: "Public" },
+    batchPic: { type: String, default: "https://res.cloudinary.com/dax7yvopb/image/upload/v1739021465/group_d5hhyk.png" },
 
     // Relationships
     routines: [{ type: Schema.Types.ObjectId, ref: "Routine" }],
@@ -55,19 +49,21 @@ const BatchSchema = new Schema<IBatch>(
   { timestamps: true }
 );
 
-// Attach Methods
-BatchSchema.methods.getTodayClasses = getTodayClasses;
-BatchSchema.methods.modifyTodaySchedule = modifyTodayScheduleController;
-
 // Pre-save Hook for Unique Code
 BatchSchema.pre("save", async function (next) {
   const batch = this as IBatch;
-  while (await mongoose.models.Batch.findOne({ code: batch.code })) {
-    batch.code = generateUniqueCode(); // Regenerate if not unique
+  if (!batch.batchCode) {
+    batch.batchCode = generateUniqueCode();
+  }
+  while (await mongoose.models.Batch.findOne({ batchCode: batch.batchCode })) {
+    batch.batchCode = generateUniqueCode();
   }
   next();
 });
 
+// Attach Methods
+BatchSchema.methods.getTodayClasses = getTodayClasses;
+BatchSchema.methods.modifyTodaySchedule = modifyTodayScheduleController;
+
 // Export Model
-const Batch = mongoose.model<IBatch>("Batch", BatchSchema);
-export default Batch;
+export const Batch = mongoose.model<IBatch>("Batch", BatchSchema);
