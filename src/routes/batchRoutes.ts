@@ -12,13 +12,20 @@ import {
 import { authenticateUser } from "../middlewares/authMiddleware";
 import { authorizeBatchAdmin } from "../middlewares/authorizeBatchAdmin";
 import { modifyTodayScheduleController } from "../models/Batch/Schedule";
+import {
+  getAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  getSingleAnnouncement,
+} from "../controllers/BatchControllers/announcementController";
 
 const router = express.Router();
 
 // Get all batches
 router.get("/", getBatches);
 // Get batch details by ID
-router.get("/:batchId", authenticateUser, getBatchById);
+router.get("/details/:batchId", authenticateUser, getBatchById);
 
 //Get all members of a  batch
 router.get("/members/:batchId", getAllMembers);
@@ -50,6 +57,17 @@ router.put(
 // Remove a member from the batch (only admins)
 router.delete("/remove/:batchId", authenticateUser, authorizeBatchAdmin, removeMember); //{ memberId }
 
+// Delete a batch
 router.delete("/delete/:batchId", deleteBatch);
+
+/*********************Announcement Route*********************************/
+
+router.get("/announcements", authenticateUser, getAnnouncements);
+router.get("/announcements/:id", authenticateUser, getSingleAnnouncement);
+router.post("/announcements", authenticateUser, authorizeBatchAdmin, createAnnouncement); //{ title, message, batchId, createdBy }
+router.put("/announcements/update/:id", authenticateUser, authorizeBatchAdmin, updateAnnouncement); //{batchId, update }
+router.delete("/announcements/:id", authenticateUser, authorizeBatchAdmin, deleteAnnouncement); //{ batchId }
+
+/************************************************************************/
 
 export default router;

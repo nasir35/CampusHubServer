@@ -8,11 +8,12 @@ const batchControllers_1 = require("../controllers/BatchControllers/batchControl
 const authMiddleware_1 = require("../middlewares/authMiddleware");
 const authorizeBatchAdmin_1 = require("../middlewares/authorizeBatchAdmin");
 const Schedule_1 = require("../models/Batch/Schedule");
+const announcementController_1 = require("../controllers/BatchControllers/announcementController");
 const router = express_1.default.Router();
 // Get all batches
 router.get("/", batchControllers_1.getBatches);
 // Get batch details by ID
-router.get("/:batchId", authMiddleware_1.authenticateUser, batchControllers_1.getBatchById);
+router.get("/details/:batchId", authMiddleware_1.authenticateUser, batchControllers_1.getBatchById);
 //Get all members of a  batch
 router.get("/members/:batchId", batchControllers_1.getAllMembers);
 // Create a new batch
@@ -32,5 +33,13 @@ router.put("/schedule/:batchId", authMiddleware_1.authenticateUser, authorizeBat
 // }
 // Remove a member from the batch (only admins)
 router.delete("/remove/:batchId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, batchControllers_1.removeMember); //{ memberId }
+// Delete a batch
 router.delete("/delete/:batchId", batchControllers_1.deleteBatch);
+/*********************Announcement Route*********************************/
+router.get("/announcements", authMiddleware_1.authenticateUser, announcementController_1.getAnnouncements);
+router.get("/announcements/:id", authMiddleware_1.authenticateUser, announcementController_1.getSingleAnnouncement);
+router.post("/announcements", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.createAnnouncement); //{ title, message, batchId, createdBy }
+router.put("/announcements/update/:id", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.updateAnnouncement); //{batchId, update }
+router.delete("/announcements/:id", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.deleteAnnouncement); //{ batchId }
+/************************************************************************/
 exports.default = router;

@@ -14,11 +14,17 @@ const Batch_1 = require("../models/Batch/Batch");
 const User_1 = require("../models/User");
 const Member_1 = require("../models/Batch/Member");
 const authorizeBatchAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         if (!req.user) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
-        const { batchId } = req.params; // Get batchId from request params
+        let { batchId } = req.params;
+        if (!batchId) {
+            batchId = (_a = req.body) === null || _a === void 0 ? void 0 : _a.batchId;
+            if (!batchId)
+                return res.status(400).json({ success: false, message: "Batch ID is required" });
+        }
         const userId = req.user.id;
         const batch = yield Batch_1.Batch.findById(batchId);
         const user = yield User_1.User.findById(userId);

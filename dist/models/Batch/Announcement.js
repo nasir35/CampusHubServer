@@ -39,7 +39,7 @@ const mongoose_1 = __importStar(require("mongoose"));
 const AnnouncementSchema = new mongoose_1.Schema({
     title: { type: String, required: true },
     message: { type: String, required: true },
-    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
+    batchId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
     isActive: { type: Boolean, default: true }, // Active by default
 }, { timestamps: true });

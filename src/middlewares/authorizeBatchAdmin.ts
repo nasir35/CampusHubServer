@@ -14,7 +14,12 @@ export const authorizeBatchAdmin = async (
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { batchId } = req.params; // Get batchId from request params
+    let { batchId } = req.params;
+    if (!batchId) {
+      batchId = req.body?.batchId;
+      if (!batchId)
+        return res.status(400).json({ success: false, message: "Batch ID is required" });
+    }
     const userId = req.user.id;
 
     const batch = await Batch.findById(batchId);

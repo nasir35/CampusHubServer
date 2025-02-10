@@ -48,12 +48,15 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.getPosts = getPosts;
 const getPostDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const post = yield Post_1.default.findById(req.params.id).populate("author", "name profilePic").populate({
-            path: "comments", populate: {
-                path: 'user',
-                model: 'User',
+        const post = yield Post_1.default.findById(req.params.id)
+            .populate("author", "name profilePic")
+            .populate({
+            path: "comments",
+            populate: {
+                path: "user",
+                model: "User",
                 select: "name profilePic",
-            }
+            },
         });
         if (!post)
             return res.status(404).json({ success: false, message: "Post not found" });
@@ -75,7 +78,7 @@ const likePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return res.status(404).json({ success: false, message: "Post not found" });
         const alreadyLiked = post.likes.includes(userId);
         if (alreadyLiked) {
-            post.likes = post.likes.filter((id) => (id != null || (id === null || id === void 0 ? void 0 : id.toString()) !== userId));
+            post.likes = post.likes.filter((id) => id != null || (id === null || id === void 0 ? void 0 : id.toString()) !== userId);
         }
         else {
             post.likes.push(userId);
@@ -96,7 +99,9 @@ const addComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const { user, text } = req.body;
         post.comments.push({ user, text });
         yield post.save();
-        res.status(201).json({ success: true, message: "Post saved successfully", data: post.comments });
+        res
+            .status(201)
+            .json({ success: true, message: "Post saved successfully", data: post.comments });
     }
     catch (error) {
         res.status(500).json({ success: false, message: "Server Error", data: error });
@@ -117,7 +122,9 @@ const updatePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const updatedPost = yield Post_1.default.findByIdAndUpdate(postId, update, { new: true });
         if (!updatedPost)
             return res.status(404).json({ success: false, message: "Post not found" });
-        res.status(200).json({ success: true, message: "Post updated successfully", data: updatedPost });
+        res
+            .status(200)
+            .json({ success: true, message: "Post updated successfully", data: updatedPost });
     }
     catch (error) {
         console.log("post update error", error);
@@ -129,7 +136,8 @@ exports.updatePost = updatePost;
 const deletePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const postId = req.params.postId;
-        const { authorId, userId } = req.body;
+        const authorId = req.header("authorId");
+        const userId = req.header("userId");
         const user = yield User_1.User.findById(userId);
         const author = yield User_1.User.findById(authorId);
         if (user.role !== "Admin" && authorId !== userId) {
