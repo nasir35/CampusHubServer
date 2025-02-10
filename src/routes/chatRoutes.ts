@@ -1,5 +1,5 @@
 import express from "express";
-import { getUserChats, sendMessage, getMessages, getAllchats, findChatId, createBinaryChat } from "../controllers/chatControllers"; // Import your controller methods
+import { getUserChats, sendMessage, getMessages, getAllchats, findChatId, createBinaryChat, readMessageUpdate } from "../controllers/chatControllers"; // Import your controller methods
 
 const router = express.Router();
 
@@ -14,9 +14,12 @@ router.get("/findChatId", findChatId);
 router.get("/:userId", getUserChats);
 
 // Route to send a message in a chat
-router.post("/send", sendMessage);
+router.post("/send/:chatId", sendMessage); //{ senderId, content }
 
 // Route to get all messages in a chat
 router.get("/messages/:chatId", getMessages);
+
+// Route to read updates in a chat
+router.post("/chat/:chatId/read/:messageId", readMessageUpdate) //{userId}
 
 export default router;

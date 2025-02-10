@@ -33,12 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Resource = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+// Define Schema
 const ResourceSchema = new mongoose_1.Schema({
-    title: { type: String, required: true },
+    resourceType: { type: String, enum: ["document", "video", "link", "image"], required: true, default: "document" },
+    name: { type: String, required: true },
     url: { type: String, required: true },
     uploadedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    uploadedAt: { type: Date, default: Date.now },
+    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
 }, { timestamps: true });
-const Resource = mongoose_1.default.model("Resource", ResourceSchema);
-exports.default = Resource;
+// Export Model
+exports.Resource = mongoose_1.default.model("Resource", ResourceSchema);

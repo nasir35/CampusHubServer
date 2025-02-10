@@ -16,12 +16,12 @@ export interface IUser extends Document {
   posts: mongoose.Schema.Types.ObjectId[];
   savedPosts: mongoose.Schema.Types.ObjectId[];
   chats: mongoose.Schema.Types.ObjectId[];
+  batchChatId: mongoose.Schema.Types.ObjectId | null;
   followers: mongoose.Schema.Types.ObjectId[];
   following: mongoose.Schema.Types.ObjectId[];
   notifications: mongoose.Schema.Types.ObjectId[];
-  batch: mongoose.Schema.Types.ObjectId[];
+  batch: mongoose.Schema.Types.ObjectId | null;
   role: "Student" | "Teacher" | "Admin";
-  batchRole: "Student" | "Teacher" | "Admin" | "Coordinator";
   isOnline: boolean;
   createdAt: Date;
 }
@@ -42,18 +42,14 @@ const UserSchema = new Schema<IUser>(
     posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
     savedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
     chats: [{ type: Schema.Types.ObjectId, ref: "Chat" }],
+    batchChatId: { type: Schema.Types.ObjectId, ref: "Chat" },
     followers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: Schema.Types.ObjectId, ref: "User" }],
     notifications: [{ type: Schema.Types.ObjectId, ref: "Notification" }],
-    batch: [{ type: Schema.Types.ObjectId, ref: "Batch" }],
+    batch: { type: Schema.Types.ObjectId, ref: "Batch" },
     role: {
       type: String,
       enum: ["Student", "Teacher", "Admin"],
-      default: "Student",
-    },
-    batchRole: {
-      type: String,
-      enum: ["Student", "Teacher", "Admin", "Coordinator"],
       default: "Student",
     },
     isOnline: { type: Boolean, default: false },

@@ -33,10 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Member = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+// Define Schema
 const MemberSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    role: { type: String, enum: ["admin", "moderator", "member"], default: "member" },
+    user: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+    role: { type: String, enum: ["student", "teacher", "admin", "moderator"], default: "student" },
+    status: { type: String, enum: ["active", "inactive", "pending"], default: "active" },
+    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch" },
+    joinedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
-const Member = mongoose_1.default.model("Member", MemberSchema);
-exports.default = Member;
+// Export Model
+exports.Member = mongoose_1.default.model("Member", MemberSchema);

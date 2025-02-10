@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -9,45 +42,124 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.modifyTodayScheduleController = void 0;
+exports.Schedule = exports.modifyTodayScheduleController = exports.getTodayClasses = void 0;
+const mongoose_1 = __importStar(require("mongoose"));
+// Define Schema
+const ScheduleSchema = new mongoose_1.Schema({
+    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
+    subject: { type: String, required: true },
+    startTime: { type: String, required: true },
+    endTime: { type: String, required: true },
+    dayOfWeek: { type: String, required: true },
+    routineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine", required: true },
+    isCancelled: { type: Boolean, default: false },
+}, { timestamps: true });
+// Method to fetch all schedules for a specific batch
+ScheduleSchema.methods.getScheduleForBatch = function (batchId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return this.model("Schedule").find({ batch: batchId, isCancelled: false });
+    });
+};
+// Method to modify schedule (add, delete, reschedule, or cancel)
+ScheduleSchema.methods.modifySchedule = function (action, data) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const schedule = this;
+        let responseMessage = "";
+        let success = false;
+        switch (action) {
+            case "add":
+                const newSchedule = new (this.model("Schedule"))(data);
+                yield newSchedule.save();
+                responseMessage = "Class added successfully.";
+                success = true;
+                break;
+            case "delete":
+                yield this.model("Schedule").deleteOne({ _id: schedule._id });
+                responseMessage = "Class deleted successfully.";
+                success = true;
+                break;
+            case "reschedule":
+                if (data.newTime) {
+                    schedule.startTime = data.newTime;
+                    yield schedule.save();
+                    responseMessage = "Class rescheduled successfully.";
+                    success = true;
+                }
+                else {
+                    responseMessage = "New time is required for rescheduling.";
+                }
+                break;
+            case "cancel":
+                schedule.isCancelled = true;
+                yield schedule.save();
+                responseMessage = "Class cancelled successfully.";
+                success = true;
+                break;
+            default:
+                responseMessage = "Invalid action.";
+        }
+        return { success, message: responseMessage };
+    });
+};
+// Function to get today's classes
+const getTodayClasses = function () {
+    return __awaiter(this, void 0, void 0, function* () {
+        const today = new Date();
+        const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" }); // Get current weekday (e.g., "Monday")
+        const schedulesForToday = yield this.model("Schedule")
+            .find({
+            batch: this.batch,
+            dayOfWeek,
+            isCancelled: false,
+        })
+            .populate("routineId"); // Assuming routineId is important to populate here.
+        return schedulesForToday;
+    });
+};
 exports.getTodayClasses = getTodayClasses;
-const Batch_1 = require("./Batch");
-// **Get Today's Schedule**
-function getTodayClasses() {
-    const today = new Date().toLocaleString("en-US", { weekday: "long" });
-    const currentRoutine = this.routines.find((routine) => { var _a; return routine._id.toString() === ((_a = this.currentRoutineId) === null || _a === void 0 ? void 0 : _a.toString()); });
-    if (!currentRoutine)
-        return [];
-    return currentRoutine.schedule.filter((cls) => cls.days.includes(today) && !cls.canceled);
-}
-// **Admin Controls: Cancel/Reschedule/Add/Delete**
-const modifyTodayScheduleController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
+// Function to modify today's schedule (add, delete, reschedule, cancel)
+const modifyTodayScheduleController = function (action, subjectData) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const schedule = this;
+        let responseMessage = "";
+        let success = false;
+        const today = new Date();
+        const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" });
+        switch (action) {
+            case "add":
+                const newSchedule = new (this.model("Schedule"))(Object.assign(Object.assign({}, subjectData), { dayOfWeek: dayOfWeek, batch: schedule.batch }));
+                yield newSchedule.save();
+                responseMessage = "Class added successfully.";
+                success = true;
+                break;
+            case "delete":
+                yield this.model("Schedule").deleteOne({ _id: schedule._id, dayOfWeek: dayOfWeek });
+                responseMessage = "Class deleted successfully.";
+                success = true;
+                break;
+            case "reschedule":
+                if (subjectData.newTime) {
+                    schedule.startTime = subjectData.newTime;
+                    yield schedule.save();
+                    responseMessage = "Class rescheduled successfully.";
+                    success = true;
+                }
+                else {
+                    responseMessage = "New time is required for rescheduling.";
+                }
+                break;
+            case "cancel":
+                schedule.isCancelled = true;
+                yield schedule.save();
+                responseMessage = "Class cancelled successfully.";
+                success = true;
+                break;
+            default:
+                responseMessage = "Invalid action.";
         }
-        const { batchId } = req.params;
-        const { action, subjectData } = req.body;
-        if (!action || !subjectData) {
-            return res.status(400).json({ success: false, message: "Action and subject Data are required" });
-        }
-        const batch = yield Batch_1.Batch.findById(batchId);
-        if (!batch) {
-            return res.status(404).json({ success: false, message: "Batch not found" });
-        }
-        // Ensure the user is an admin
-        const member = batch.membersList.find((m) => { var _a; return m.userId.toString() === ((_a = req === null || req === void 0 ? void 0 : req.user) === null || _a === void 0 ? void 0 : _a.id); });
-        if (!member || (member.role !== "admin" && member.role !== "moderator")) {
-            return res.status(403).json({ success: false, message: "Forbidden: Only admins or moderators can modify schedule" });
-        }
-        // Call the `modifyTodaySchedule` function
-        const result = batch.modifyTodaySchedule(action, subjectData);
-        yield batch.save(); // Save the changes
-        res.status(200).json({ success: result.success, message: result.message, data: batch });
-    }
-    catch (error) {
-        console.error("Modify Schedule Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-});
+        return { success, message: responseMessage };
+    });
+};
 exports.modifyTodayScheduleController = modifyTodayScheduleController;
+// Export Model
+exports.Schedule = mongoose_1.default.model("Schedule", ScheduleSchema);

@@ -32,21 +32,63 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Routine = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-// Routine Schema
+// Define Schema
 const RoutineSchema = new mongoose_1.Schema({
-    title: { type: String, required: true },
-    schedule: [
-        {
-            days: [{ type: String, required: true }],
-            time: { type: String, required: true },
-            subject: { type: String, required: true },
-            instructor: { type: String },
-            canceled: { type: Boolean, default: false },
-        },
-    ],
-    createdAt: { type: Date, default: Date.now },
+    name: { type: String, required: true },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
+    schedules: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Schedule" }],
+    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+    status: { type: String, enum: ["active", "archived", "completed"], default: "active" },
 }, { timestamps: true });
-const Routine = mongoose_1.default.model("Routine", RoutineSchema);
-exports.default = Routine;
+// Method to get active schedules for this routine
+RoutineSchema.methods.getActiveSchedules = function () {
+    return __awaiter(this, void 0, void 0, function* () {
+        const routine = this;
+        return yield mongoose_1.default.model("Schedule").find({ routineId: routine._id, isCancelled: false });
+    });
+};
+// Method to add a schedule to this routine
+RoutineSchema.methods.addSchedule = function (scheduleId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const routine = this;
+        if (!routine.schedules.includes(scheduleId)) {
+            routine.schedules.push(scheduleId);
+            yield routine.save();
+            return { success: true, message: "Schedule added to routine." };
+        }
+        else {
+            return { success: false, message: "Schedule already exists in routine." };
+        }
+    });
+};
+// Method to remove a schedule from this routine
+RoutineSchema.methods.removeSchedule = function (scheduleId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const routine = this;
+        const index = routine.schedules.indexOf(scheduleId);
+        if (index > -1) {
+            routine.schedules.splice(index, 1);
+            yield routine.save();
+            return { success: true, message: "Schedule removed from routine." };
+        }
+        else {
+            return { success: false, message: "Schedule not found in routine." };
+        }
+    });
+};
+// Export Model
+exports.Routine = mongoose_1.default.model("Routine", RoutineSchema);

@@ -1,59 +1,67 @@
 import { Request, Response } from "express";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 import { AuthReq } from "../../middlewares/authMiddleware";
-import {Batch } from "../../models/Batch/Batch";
-import Member, { IMember } from "../../models/Batch/Member";
+import { Batch, IBatch } from "../../models/Batch/Batch";
 import { Chat } from "../../models/Chat";
-import { User } from "../../models/User";
+import { IUser, User } from "../../models/User";
 import { generateUniqueCode } from "../../utils/helper";
+import { Schedule } from "../../models/Batch/Schedule";
+import { Announcement } from "../../models/Batch/Announcement";
+import { Resource } from "../../models/Batch/Resources";
+import { IMember, Member } from "../../models/Batch/Member";
+import { Routine } from "../../models/Batch/Routine";
 
-// Create a new batch
-export const createBatch = async (req: AuthReq, res: Response):Promise<any> => {
+export const createBatch = async (req: AuthReq, res: Response): Promise<any> => {
   try {
     const { batchName, description, batchType, institute, batchPic } = req.body;
     if (!req.user) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
+
     const createdBy = req.user.id;
-    const admin = new Member({
-      userId: createdBy,
-      role: "admin",
-    });
-    const newBatch = new Batch({
+
+    // Create and save the admin member
+    const admin: any = await new Member({ user: createdBy, role: "admin", batch: null }).save();
+
+    // Initialize new batch
+    const newBatch: IBatch = new Batch({
       batchName,
       description,
       batchType,
       institute,
       batchPic,
       createdBy,
-      membersList: [admin._id],
+      membersList: [{ userId: new mongoose.Types.ObjectId(createdBy), memberId: admin._id }],
     });
-    if (!newBatch.batchCode) {
+    // Generate a unique batchCode
+    do {
       newBatch.batchCode = generateUniqueCode();
-      }
-      while (await mongoose.models.Batch.findOne({ batchCode: newBatch.batchCode })) {
-        newBatch.batchCode = generateUniqueCode();
-      }
-    await newBatch.save();
-    //create new batch chat 
-    let members:any = [];
-    // Add creator to the members list
-    if (!members.includes(createdBy)) {
-      members.push(createdBy);
-    }
+    } while (await Batch.exists({ batchCode: newBatch.batchCode }));
 
-    // Create new group chat
-    console.log("batch saved")
-    const newChat = new Chat({ isGroup: true, name : batchName, members });
+    admin.batch = newBatch._id;
+    admin.save();
+    // Create new batch chat
+    let members = [createdBy];
+    const newChat: any = new Chat({ isGroup: true, name: batchName, members });
     const resp = await newChat.save();
-    console.log("new chat saved", resp)
 
-    // Add chat reference to all members
-    await User.updateMany({ _id: { $in: members } }, { $push: { chats: newChat._id } });    
+    newBatch.chatId = newChat._id;
+    await newBatch.save();
+    console.log("Batch saved successfully");
+
+    // Add chat & batch reference to all members
+    await User.updateMany(
+      { _id: { $in: members } },
+      { $set: { batchChatId: newChat._id, batchId: newBatch._id } },
+      { new: true, upsert: true }
+    );
 
     res.status(201).json({ success: true, message: "Batch created successfully", data: newBatch });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error });
+    // console.error("Error creating batch:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to create batch", error: (error as any).message });
   }
 };
 
@@ -61,14 +69,16 @@ export const createBatch = async (req: AuthReq, res: Response):Promise<any> => {
 export const getBatches = async (req: Request, res: Response): Promise<any> => {
   try {
     const batches = await Batch.find().populate("createdBy", "name email");
-    res.status(200).json({ success: true, message: `Found ${batches.length} Batches.`, data: batches });
+    res
+      .status(200)
+      .json({ success: true, message: `Found ${batches.length} Batches.`, data: batches });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 // Get batch by ID
-export const getBatchById = async (req: Request, res: Response):Promise<any> => {
+export const getBatchById = async (req: Request, res: Response): Promise<any> => {
   try {
     const { batchId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(batchId)) {
@@ -86,48 +96,57 @@ export const getBatchById = async (req: Request, res: Response):Promise<any> => 
   }
 };
 
-export const joinBatch = async (req: AuthReq, res: Response): Promise<any> => {
+// Controller to join a batch
+export const joinBatchController = async (req: Request, res: Response) => {
+  const { batchId } = req.params;
+  const { userId } = req.body;
+
   try {
-    const { batchCode } = req.body;
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-
-    const userId = req.user.id;
-    const batch = await Batch.findOne({batchCode });
-
+    const batch = await Batch.findById(batchId);
     if (!batch) {
-      return res.status(404).json({ success: false, message: "Batch not found" });
+      return res.status(404).json({ message: "Batch not found" });
     }
 
-    // Check if user is already a member
-    const isMember = batch.membersList.some((member) => member.userId.toString() === userId);
-    if (isMember) {
-      return res.status(400).json({ success: false, message: "Already a member" });
+    const existingMember = await Member.findOne({ user: userId, batch: batchId });
+    if (existingMember) {
+      return res.status(400).json({ message: "User is already a member of this batch" });
     }
 
-    // Convert userId to ObjectId if needed
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    // Check if the batch is private (optional, based on your app logic)
+    if (batch.batchType === "Private") {
+      // Add more checks for invitation or permission if needed
+      // You might want to ensure that the user has been invited or is authorized
+      // For now, we assume the user can join regardless
+    }
 
-    // Ensure the correct object structure when adding a new member
-    batch.membersList.push({
-      userId: new mongoose.Types.ObjectId(userId),
-      role: "member",
-    } as IMember);
+    // Create a new member document for the user
+    const newMember: IMember = new Member({
+      user: userId,
+      batch: batchId,
+      role: "student", // Default role; could be passed if needed
+      status: "active", // Mark the user as active in the batch
+    });
+    await newMember.save();
 
+    // Update the batch's membersList with the new member
+    batch.membersList.push({ userId, memberId: newMember._id }); // Add member to the batch
     await batch.save();
 
-    return res.status(200).json({
-      success: true,
-      message: "Joined batch successfully",
-      data: batch,
-    });
+    const user: any = await User.findById(userId);
+    if (user) {
+      await User.findByIdAndUpdate(
+        userId,
+        { $set: { batch: batch._id, batchChatId: batch.chatId } },
+        { new: true, upsert: true }
+      );
+    }
+    // Return success response
+    return res.status(200).json({ message: "Successfully joined the batch", batch, newMember });
   } catch (error) {
     console.error("Error joining batch:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ message: "An error occurred while joining the batch", error });
   }
 };
-
 
 // Leave a batch
 export const leaveBatch = async (req: AuthReq, res: Response): Promise<any> => {
@@ -136,42 +155,37 @@ export const leaveBatch = async (req: AuthReq, res: Response): Promise<any> => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
-    const userId = req.user.id;
+    const userId: any = req.user.id;
 
-    const batch = await Batch.findById(batchId);
+    const batch: IBatch | null = await Batch.findById(batchId);
+    const user: IUser | null = await User.findById(userId);
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    batch.membersList = batch.membersList.filter((member) => member.userId.toString() !== userId);
+    //check if user exist in the batch
+    const memberId = batch.membersList.find(
+      (m) => m.userId.toString() === new mongoose.Types.ObjectId(userId).toString()
+    );
+    if (!memberId) {
+      return res.status(404).json({ success: false, message: "User not found in the batch" });
+    }
+
+    batch.membersList = batch.membersList.filter(
+      (member) => member.userId.toString() !== new mongoose.Types.ObjectId(userId).toString()
+    );
     await batch.save();
 
+    await Member.findByIdAndDelete(userId);
+
+    user.batch = null;
+    user.batchChatId = null;
+    user.save();
+
     res.status(200).json({ success: true, message: "Left batch successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// Delete a batch (Admin Only)
-export const deleteBatch = async (req: AuthReq, res: Response): Promise<any> => {
-  try {
-    const { batchId } = req.params;
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-    const userId = req.user.id;
-
-    const batch = await Batch.findById(batchId);
-    if (!batch) {
-      return res.status(404).json({ success: false, message: "Batch not found" });
-    }
-
-    if (batch.createdBy.toString() !== userId) {
-      return res.status(403).json({ success: false, message: "Not authorized" });
-    }
-
-    await Batch.findByIdAndDelete(batchId);
-    res.status(200).json({ success: true, message: "Batch deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }
@@ -184,24 +198,43 @@ export const updateBatch = async (req: AuthReq, res: Response): Promise<any> => 
     }
 
     const { batchId } = req.params;
-    const {updateData} = req.body; // Accept dynamic fields
+    const { updateData } = req.body; // Accept dynamic fields
     const userId = req.user.id;
+
+    if (!updateData) {
+      return res.status(400).json({
+        success: false,
+        message: "No update data provided! use (updateData) object to update.",
+      });
+    }
 
     const batch = await Batch.findById(batchId);
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
 
-    // Check if the user is an admin or moderator
-    const member = batch.membersList.find((m) => m.userId.toString() === userId);
-    if (!member || (member.role !== "admin" && member.role !== "moderator")) {
-      return res.status(403).json({ success: false, message: "Forbidden: Admin or Moderator access required" });
+    if (req.user.role !== "Admin") {
+      // Check if the user is an admin or moderator
+      const memberId = batch.membersList.find(
+        (m) => m.userId.toString() === new mongoose.Types.ObjectId(userId).toString()
+      );
+      const member: IMember | null = await Member.findById(memberId);
+      if (!member || (member.role !== "admin" && member.role !== "moderator")) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Forbidden: Admin or Moderator access required" });
+      }
     }
-
     // Perform update using $set
-    const updatedBatch = await Batch.findByIdAndUpdate(batchId, { $set: updateData }, { new: true, upsert: true });
+    const updatedBatch = await Batch.findByIdAndUpdate(
+      batchId,
+      { $set: updateData },
+      { new: true, upsert: true }
+    );
 
-    res.status(200).json({ success: true, message: "Batch updated successfully", data: updatedBatch });
+    res
+      .status(200)
+      .json({ success: true, message: "Batch updated successfully", data: updatedBatch });
   } catch (error) {
     console.error("Update Batch Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -209,7 +242,7 @@ export const updateBatch = async (req: AuthReq, res: Response): Promise<any> => 
 };
 
 // Add a member to the batch (only admins)
-export const addMember = async (req: AuthReq, res: Response):Promise<any> => {
+export const addMember = async (req: AuthReq, res: Response): Promise<any> => {
   try {
     const { batchId } = req.params;
     const { userId, role } = req.body;
@@ -218,18 +251,39 @@ export const addMember = async (req: AuthReq, res: Response):Promise<any> => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const batch = await Batch.findById(batchId);
+    const batch: IBatch | null = await Batch.findById(batchId);
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
+    const foundUser: any = await User.findById(userId);
+    if (!foundUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    const isAlreadyMember = batch.membersList.some((m) => m.userId.toString() === userId);
+    const isAlreadyMember = batch.membersList.some(
+      (member: any) => member.userId.toString() === new mongoose.Types.ObjectId(userId).toString()
+    );
+
     if (isAlreadyMember) {
       return res.status(400).json({ success: false, message: "User is already a member" });
     }
-
-    batch.membersList.push({ userId: new mongoose.Types.ObjectId(userId), role: role || "member" } as IMember);
+    const newMember: IMember = new Member({
+      user: new mongoose.Types.ObjectId(userId),
+      role,
+      batch: batch._id,
+    });
+    await newMember.save();
+    batch.membersList.push({
+      userId: new mongoose.Types.ObjectId(userId),
+      memberId: newMember._id,
+    });
     await batch.save();
+
+    await User.findByIdAndUpdate(
+      userId,
+      { $set: { batch: batch._id, role: role, batchChatId: batch.chatId } },
+      { new: true, upsert: true }
+    );
 
     res.status(200).json({ success: true, message: "Member added successfully", data: batch });
   } catch (error) {
@@ -242,19 +296,41 @@ export const addMember = async (req: AuthReq, res: Response):Promise<any> => {
 export const removeMember = async (req: AuthReq, res: Response): Promise<any> => {
   try {
     const { batchId } = req.params;
-    const { memberId } = req.body;
+    const { userId } = req.body;
 
     if (!req.user) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const batch = await Batch.findById(batchId);
+    const batch: IBatch | null = await Batch.findById(batchId);
+    const user: IUser | null = await User.findById(userId);
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    batch.membersList = batch.membersList.filter((m) => m.userId.toString() !== memberId);
+    //check if user exist in the batch
+    const memberId = batch.membersList.find(
+      (m) => m.userId.toString() === new mongoose.Types.ObjectId(userId).toString()
+    );
+    if (!memberId) {
+      return res.status(404).json({ success: false, message: "User not found in the batch" });
+    }
+
+    batch.membersList = batch.membersList.filter(
+      (m: any) => m.userId?.toString() !== new mongoose.Types.ObjectId(userId).toString()
+    );
     await batch.save();
+
+    await Member.findOneAndDelete({ user: new mongoose.Types.ObjectId(userId) });
+
+    await User.findByIdAndUpdate(
+      userId,
+      { $set: { batch: null, batchChatId: null } },
+      { new: true, upsert: true }
+    );
 
     res.status(200).json({ success: true, message: "Member removed successfully", data: batch });
   } catch (error) {
@@ -263,4 +339,70 @@ export const removeMember = async (req: AuthReq, res: Response): Promise<any> =>
   }
 };
 
+export const getAllMembers = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { batchId } = req.params;
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found" });
+    }
+    const members = await Member.find({ batch: batch._id }).populate({
+      path: "user", // Field to populate
+      model: "User",
+      select: "name email profilePic", // Only return these fields
+    });
+    return res
+      .status(200)
+      .json({ success: true, message: `found ${members.length} members`, data: members });
+  } catch (err) {
+    console.error("Error fetching members:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
+export const deleteBatch = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { batchId } = req.params;
+    const { userId } = req.body;
+
+    // Find the batch
+    const batch = await Batch.findById(batchId);
+    const user = await User.findById(userId);
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found" });
+    }
+
+    if (user?.role !== "Admin") {
+      // Check if the user is an admin
+      const memberId = batch.membersList.find(
+        (member: any) => member.userId.toString() === new mongoose.Types.ObjectId(userId).toString()
+      );
+      const member: IMember | null = await Member.findById(memberId);
+      if (!member || member.role !== "admin") {
+        return res
+          .status(403)
+          .json({ success: false, message: "Forbidden: Admin access required" });
+      }
+    }
+
+    // Delete related chat
+    if (batch.chatId) {
+      await Chat.findByIdAndDelete(batch.chatId);
+    }
+
+    // Delete related data
+    await Announcement.deleteMany({ _id: { $in: batch.announcements } });
+    await Resource.deleteMany({ _id: { $in: batch.resources } });
+    await Member.deleteMany({ _id: { $in: batch.membersList } });
+    await Routine.deleteMany({ _id: { $in: batch.routines } });
+    await Schedule.deleteMany({ _id: { $in: batch.upcomingClasses } });
+
+    // Finally, delete the batch
+    await Batch.findByIdAndDelete(batchId);
+
+    return res.status(200).json({ success: true, message: "Batch deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting batch:", error);
+    return res.status(500).json({ success: false, message: "Server error", error });
+  }
+};

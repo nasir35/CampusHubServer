@@ -12,14 +12,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeMember = exports.addMember = exports.updateBatch = exports.deleteBatch = exports.leaveBatch = exports.joinBatch = exports.getBatchById = exports.getBatches = exports.createBatch = void 0;
+exports.deleteBatch = exports.getAllMembers = exports.removeMember = exports.addMember = exports.updateBatch = exports.leaveBatch = exports.joinBatchController = exports.getBatchById = exports.getBatches = exports.createBatch = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const Batch_1 = require("../../models/Batch/Batch");
-const Member_1 = __importDefault(require("../../models/Batch/Member"));
 const Chat_1 = require("../../models/Chat");
 const User_1 = require("../../models/User");
 const helper_1 = require("../../utils/helper");
-// Create a new batch
+const Schedule_1 = require("../../models/Batch/Schedule");
+const Announcement_1 = require("../../models/Batch/Announcement");
+const Resources_1 = require("../../models/Batch/Resources");
+const Member_1 = require("../../models/Batch/Member");
+const Routine_1 = require("../../models/Batch/Routine");
 const createBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { batchName, description, batchType, institute, batchPic } = req.body;
@@ -27,10 +30,9 @@ const createBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const createdBy = req.user.id;
-        const admin = new Member_1.default({
-            userId: createdBy,
-            role: "admin",
-        });
+        // Create and save the admin member
+        const admin = yield new Member_1.Member({ user: createdBy, role: "admin", batch: null }).save();
+        // Initialize new batch
         const newBatch = new Batch_1.Batch({
             batchName,
             description,
@@ -38,32 +40,30 @@ const createBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             institute,
             batchPic,
             createdBy,
-            membersList: [admin._id],
+            membersList: [{ userId: new mongoose_1.default.Types.ObjectId(createdBy), memberId: admin._id }],
         });
-        if (!newBatch.batchCode) {
+        // Generate a unique batchCode
+        do {
             newBatch.batchCode = (0, helper_1.generateUniqueCode)();
-        }
-        while (yield mongoose_1.default.models.Batch.findOne({ batchCode: newBatch.batchCode })) {
-            newBatch.batchCode = (0, helper_1.generateUniqueCode)();
-        }
-        yield newBatch.save();
-        //create new batch chat 
-        let members = [];
-        // Add creator to the members list
-        if (!members.includes(createdBy)) {
-            members.push(createdBy);
-        }
-        // Create new group chat
-        console.log("batch saved");
+        } while (yield Batch_1.Batch.exists({ batchCode: newBatch.batchCode }));
+        admin.batch = newBatch._id;
+        admin.save();
+        // Create new batch chat
+        let members = [createdBy];
         const newChat = new Chat_1.Chat({ isGroup: true, name: batchName, members });
         const resp = yield newChat.save();
-        console.log("new chat saved", resp);
-        // Add chat reference to all members
-        yield User_1.User.updateMany({ _id: { $in: members } }, { $push: { chats: newChat._id } });
+        newBatch.chatId = newChat._id;
+        yield newBatch.save();
+        console.log("Batch saved successfully");
+        // Add chat & batch reference to all members
+        yield User_1.User.updateMany({ _id: { $in: members } }, { $set: { batchChatId: newChat._id, batchId: newBatch._id } }, { new: true, upsert: true });
         res.status(201).json({ success: true, message: "Batch created successfully", data: newBatch });
     }
     catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        // console.error("Error creating batch:", error);
+        res
+            .status(500)
+            .json({ success: false, message: "Failed to create batch", error: error.message });
     }
 });
 exports.createBatch = createBatch;
@@ -71,7 +71,9 @@ exports.createBatch = createBatch;
 const getBatches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const batches = yield Batch_1.Batch.find().populate("createdBy", "name email");
-        res.status(200).json({ success: true, message: `Found ${batches.length} Batches.`, data: batches });
+        res
+            .status(200)
+            .json({ success: true, message: `Found ${batches.length} Batches.`, data: batches });
     }
     catch (error) {
         res.status(500).json({ success: false, message: "Server error" });
@@ -96,42 +98,49 @@ const getBatchById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.getBatchById = getBatchById;
-const joinBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+// Controller to join a batch
+const joinBatchController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { batchId } = req.params;
+    const { userId } = req.body;
     try {
-        const { batchCode } = req.body;
-        if (!req.user) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
-        }
-        const userId = req.user.id;
-        const batch = yield Batch_1.Batch.findOne({ batchCode });
+        const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
-            return res.status(404).json({ success: false, message: "Batch not found" });
+            return res.status(404).json({ message: "Batch not found" });
         }
-        // Check if user is already a member
-        const isMember = batch.membersList.some((member) => member.userId.toString() === userId);
-        if (isMember) {
-            return res.status(400).json({ success: false, message: "Already a member" });
+        const existingMember = yield Member_1.Member.findOne({ user: userId, batch: batchId });
+        if (existingMember) {
+            return res.status(400).json({ message: "User is already a member of this batch" });
         }
-        // Convert userId to ObjectId if needed
-        const userObjectId = new mongoose_1.default.Types.ObjectId(userId);
-        // Ensure the correct object structure when adding a new member
-        batch.membersList.push({
-            userId: new mongoose_1.default.Types.ObjectId(userId),
-            role: "member",
+        // Check if the batch is private (optional, based on your app logic)
+        if (batch.batchType === "Private") {
+            // Add more checks for invitation or permission if needed
+            // You might want to ensure that the user has been invited or is authorized
+            // For now, we assume the user can join regardless
+        }
+        // Create a new member document for the user
+        const newMember = new Member_1.Member({
+            user: userId,
+            batch: batchId,
+            role: "student", // Default role; could be passed if needed
+            status: "active", // Mark the user as active in the batch
         });
+        yield newMember.save();
+        // Update the batch's membersList with the new member
+        batch.membersList.push({ userId, memberId: newMember._id }); // Add member to the batch
         yield batch.save();
-        return res.status(200).json({
-            success: true,
-            message: "Joined batch successfully",
-            data: batch,
-        });
+        const user = yield User_1.User.findById(userId);
+        if (user) {
+            yield User_1.User.findByIdAndUpdate(userId, { $set: { batch: batch._id, batchChatId: batch.chatId } }, { new: true, upsert: true });
+        }
+        // Return success response
+        return res.status(200).json({ message: "Successfully joined the batch", batch, newMember });
     }
     catch (error) {
         console.error("Error joining batch:", error);
-        return res.status(500).json({ success: false, message: "Server error" });
+        return res.status(500).json({ message: "An error occurred while joining the batch", error });
     }
 });
-exports.joinBatch = joinBatch;
+exports.joinBatchController = joinBatchController;
 // Leave a batch
 const leaveBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -141,11 +150,24 @@ const leaveBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         const userId = req.user.id;
         const batch = yield Batch_1.Batch.findById(batchId);
+        const user = yield User_1.User.findById(userId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
-        batch.membersList = batch.membersList.filter((member) => member.userId.toString() !== userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        //check if user exist in the batch
+        const memberId = batch.membersList.find((m) => m.userId.toString() === new mongoose_1.default.Types.ObjectId(userId).toString());
+        if (!memberId) {
+            return res.status(404).json({ success: false, message: "User not found in the batch" });
+        }
+        batch.membersList = batch.membersList.filter((member) => member.userId.toString() !== new mongoose_1.default.Types.ObjectId(userId).toString());
         yield batch.save();
+        yield Member_1.Member.findByIdAndDelete(userId);
+        user.batch = null;
+        user.batchChatId = null;
+        user.save();
         res.status(200).json({ success: true, message: "Left batch successfully" });
     }
     catch (error) {
@@ -153,29 +175,6 @@ const leaveBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.leaveBatch = leaveBatch;
-// Delete a batch (Admin Only)
-const deleteBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { batchId } = req.params;
-        if (!req.user) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
-        }
-        const userId = req.user.id;
-        const batch = yield Batch_1.Batch.findById(batchId);
-        if (!batch) {
-            return res.status(404).json({ success: false, message: "Batch not found" });
-        }
-        if (batch.createdBy.toString() !== userId) {
-            return res.status(403).json({ success: false, message: "Not authorized" });
-        }
-        yield Batch_1.Batch.findByIdAndDelete(batchId);
-        res.status(200).json({ success: true, message: "Batch deleted successfully" });
-    }
-    catch (error) {
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-});
-exports.deleteBatch = deleteBatch;
 const updateBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!req.user) {
@@ -184,18 +183,31 @@ const updateBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const { batchId } = req.params;
         const { updateData } = req.body; // Accept dynamic fields
         const userId = req.user.id;
+        if (!updateData) {
+            return res.status(400).json({
+                success: false,
+                message: "No update data provided! use (updateData) object to update.",
+            });
+        }
         const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
-        // Check if the user is an admin or moderator
-        const member = batch.membersList.find((m) => m.userId.toString() === userId);
-        if (!member || (member.role !== "admin" && member.role !== "moderator")) {
-            return res.status(403).json({ success: false, message: "Forbidden: Admin or Moderator access required" });
+        if (req.user.role !== "Admin") {
+            // Check if the user is an admin or moderator
+            const memberId = batch.membersList.find((m) => m.userId.toString() === new mongoose_1.default.Types.ObjectId(userId).toString());
+            const member = yield Member_1.Member.findById(memberId);
+            if (!member || (member.role !== "admin" && member.role !== "moderator")) {
+                return res
+                    .status(403)
+                    .json({ success: false, message: "Forbidden: Admin or Moderator access required" });
+            }
         }
         // Perform update using $set
         const updatedBatch = yield Batch_1.Batch.findByIdAndUpdate(batchId, { $set: updateData }, { new: true, upsert: true });
-        res.status(200).json({ success: true, message: "Batch updated successfully", data: updatedBatch });
+        res
+            .status(200)
+            .json({ success: true, message: "Batch updated successfully", data: updatedBatch });
     }
     catch (error) {
         console.error("Update Batch Error:", error);
@@ -215,12 +227,26 @@ const addMember = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
-        const isAlreadyMember = batch.membersList.some((m) => m.userId.toString() === userId);
+        const foundUser = yield User_1.User.findById(userId);
+        if (!foundUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        const isAlreadyMember = batch.membersList.some((member) => member.userId.toString() === new mongoose_1.default.Types.ObjectId(userId).toString());
         if (isAlreadyMember) {
             return res.status(400).json({ success: false, message: "User is already a member" });
         }
-        batch.membersList.push({ userId: new mongoose_1.default.Types.ObjectId(userId), role: role || "member" });
+        const newMember = new Member_1.Member({
+            user: new mongoose_1.default.Types.ObjectId(userId),
+            role,
+            batch: batch._id,
+        });
+        yield newMember.save();
+        batch.membersList.push({
+            userId: new mongoose_1.default.Types.ObjectId(userId),
+            memberId: newMember._id,
+        });
         yield batch.save();
+        yield User_1.User.findByIdAndUpdate(userId, { $set: { batch: batch._id, role: role, batchChatId: batch.chatId } }, { new: true, upsert: true });
         res.status(200).json({ success: true, message: "Member added successfully", data: batch });
     }
     catch (error) {
@@ -233,16 +259,27 @@ exports.addMember = addMember;
 const removeMember = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { batchId } = req.params;
-        const { memberId } = req.body;
+        const { userId } = req.body;
         if (!req.user) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
         const batch = yield Batch_1.Batch.findById(batchId);
+        const user = yield User_1.User.findById(userId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
-        batch.membersList = batch.membersList.filter((m) => m.userId.toString() !== memberId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        //check if user exist in the batch
+        const memberId = batch.membersList.find((m) => m.userId.toString() === new mongoose_1.default.Types.ObjectId(userId).toString());
+        if (!memberId) {
+            return res.status(404).json({ success: false, message: "User not found in the batch" });
+        }
+        batch.membersList = batch.membersList.filter((m) => { var _a; return ((_a = m.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== new mongoose_1.default.Types.ObjectId(userId).toString(); });
         yield batch.save();
+        yield Member_1.Member.findOneAndDelete({ user: new mongoose_1.default.Types.ObjectId(userId) });
+        yield User_1.User.findByIdAndUpdate(userId, { $set: { batch: null, batchChatId: null } }, { new: true, upsert: true });
         res.status(200).json({ success: true, message: "Member removed successfully", data: batch });
     }
     catch (error) {
@@ -251,3 +288,65 @@ const removeMember = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.removeMember = removeMember;
+const getAllMembers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { batchId } = req.params;
+        const batch = yield Batch_1.Batch.findById(batchId);
+        if (!batch) {
+            return res.status(404).json({ success: false, message: "Batch not found" });
+        }
+        const members = yield Member_1.Member.find({ batch: batch._id }).populate({
+            path: "user", // Field to populate
+            model: "User",
+            select: "name email profilePic", // Only return these fields
+        });
+        return res
+            .status(200)
+            .json({ success: true, message: `found ${members.length} members`, data: members });
+    }
+    catch (err) {
+        console.error("Error fetching members:", err);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+exports.getAllMembers = getAllMembers;
+const deleteBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { batchId } = req.params;
+        const { userId } = req.body;
+        // Find the batch
+        const batch = yield Batch_1.Batch.findById(batchId);
+        const user = yield User_1.User.findById(userId);
+        if (!batch) {
+            return res.status(404).json({ success: false, message: "Batch not found" });
+        }
+        if ((user === null || user === void 0 ? void 0 : user.role) !== "Admin") {
+            // Check if the user is an admin
+            const memberId = batch.membersList.find((member) => member.userId.toString() === new mongoose_1.default.Types.ObjectId(userId).toString());
+            const member = yield Member_1.Member.findById(memberId);
+            if (!member || member.role !== "admin") {
+                return res
+                    .status(403)
+                    .json({ success: false, message: "Forbidden: Admin access required" });
+            }
+        }
+        // Delete related chat
+        if (batch.chatId) {
+            yield Chat_1.Chat.findByIdAndDelete(batch.chatId);
+        }
+        // Delete related data
+        yield Announcement_1.Announcement.deleteMany({ _id: { $in: batch.announcements } });
+        yield Resources_1.Resource.deleteMany({ _id: { $in: batch.resources } });
+        yield Member_1.Member.deleteMany({ _id: { $in: batch.membersList } });
+        yield Routine_1.Routine.deleteMany({ _id: { $in: batch.routines } });
+        yield Schedule_1.Schedule.deleteMany({ _id: { $in: batch.upcomingClasses } });
+        // Finally, delete the batch
+        yield Batch_1.Batch.findByIdAndDelete(batchId);
+        return res.status(200).json({ success: true, message: "Batch deleted successfully" });
+    }
+    catch (error) {
+        console.error("Error deleting batch:", error);
+        return res.status(500).json({ success: false, message: "Server error", error });
+    }
+});
+exports.deleteBatch = deleteBatch;

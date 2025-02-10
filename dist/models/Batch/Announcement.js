@@ -33,10 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Announcement = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+// Define Schema
 const AnnouncementSchema = new mongoose_1.Schema({
+    title: { type: String, required: true },
     message: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now },
+    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
+    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+    isActive: { type: Boolean, default: true }, // Active by default
 }, { timestamps: true });
-const Announcement = mongoose_1.default.model("Announcement", AnnouncementSchema);
-exports.default = Announcement;
+// Export Model
+exports.Announcement = mongoose_1.default.model("Announcement", AnnouncementSchema);

@@ -12,13 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMessages = exports.sendMessage = exports.getUserChats = exports.getAllchats = exports.findChatId = exports.createBatchChat = exports.createBinaryChat = void 0;
+exports.readMessageUpdate = exports.deleteChat = exports.getMessages = exports.sendMessage = exports.getUserChats = exports.getAllchats = exports.findChatId = exports.createBatchChat = exports.createBinaryChat = void 0;
 const Chat_1 = require("../models/Chat");
-const Message_1 = require("../models/Message");
-const notificationController_1 = require("./notificationController");
-const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
 const User_1 = require("../models/User");
 const findChatBetweenUsers_1 = require("../utils/findChatBetweenUsers");
+const mongoose_1 = __importDefault(require("mongoose"));
 const createBinaryChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { senderId, receiverId } = req.body;
     if (!senderId || !receiverId) {
@@ -104,40 +102,91 @@ const getUserChats = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.getUserChats = getUserChats;
-// Send a message
-exports.sendMessage = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { senderId, chatId, content } = req.body;
-    // Find the chat
-    const chat = yield Chat_1.Chat.findById(chatId);
-    if (!chat) {
-        return res.status(404).json({ success: false, message: "Chat not found" });
+// Send a new message
+const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { chatId } = req.params;
+    const { senderId, content } = req.body;
+    if (!mongoose_1.default.Types.ObjectId.isValid(chatId) || !mongoose_1.default.Types.ObjectId.isValid(senderId)) {
+        return res.status(400).json({ error: "Invalid chatId or senderId" });
     }
-    // Create the new message
-    const newMessage = new Message_1.Message({
-        sender: senderId,
-        content,
-        chatId: chat._id,
-        readBy: [], // Initially no one has read the message
-    });
-    // Save the message in the Message collection
-    yield newMessage.save();
-    // Notify chat participants (excluding the sender)
-    chat.members.forEach((participant) => __awaiter(void 0, void 0, void 0, function* () {
-        if (participant.toString() !== senderId.toString()) {
-            yield (0, notificationController_1.createNotification)(participant.toString(), senderId, "New Message", "You have a new message.", `/chat/${chatId}` // Link to the chat
-            );
-        }
-    }));
-    res.status(201).json({ success: true, message: "Message sent successfully", data: newMessage });
-}));
-// Get messages of a chat
-const getMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const messages = yield Message_1.Message.find({ chatId: req.params.chatId }).sort({ createdAt: 1 });
-        res.status(200).json({ success: true, message: "Messages fetched successfully", data: messages });
+        const chat = yield Chat_1.Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ error: "Chat not found" });
+        }
+        // Create the new message
+        const newMessage = {
+            sender: senderId,
+            content: content,
+            createdAt: new Date(),
+            readBy: [senderId], // Message is automatically "read" by the sender
+        };
+        chat.messages.push(newMessage);
+        yield chat.save();
+        res.status(201).json({ success: true, message: newMessage });
     }
     catch (error) {
-        res.status(500).json({ success: false, message: "Error fetching messages" });
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+exports.sendMessage = sendMessage;
+const getMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { chatId } = req.params;
+    if (!mongoose_1.default.Types.ObjectId.isValid(chatId)) {
+        return res.status(400).json({ error: "Invalid chatId" });
+    }
+    try {
+        const chat = yield Chat_1.Chat.findById(chatId)
+            .populate("messages.sender", "name email") // Populate sender details
+            .populate("messages.readBy", "name email"); // Populate users who read the message
+        if (!chat) {
+            return res.status(404).json({ error: "Chat not found" });
+        }
+        res.status(200).json({ success: true, messages: chat.messages });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 exports.getMessages = getMessages;
+const deleteChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { chatId } = req.params;
+        // Find the chat
+        const chat = yield Chat_1.Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ success: false, message: "Chat not found" });
+        }
+        // Delete all messages from the chat
+        yield Chat_1.Chat.updateOne({ _id: chatId }, { $set: { messages: [] } });
+        // Remove the chat from users' chat lists
+        yield User_1.User.updateMany({ _id: { $in: chat.members } }, { $pull: { chats: chatId } });
+        // Finally, delete the chat
+        yield Chat_1.Chat.findByIdAndDelete(chatId);
+        return res.status(200).json({ success: true, message: "Chat deleted successfully" });
+    }
+    catch (error) {
+        console.error("Error deleting chat:", error);
+        return res.status(500).json({ success: false, message: "Server error", error });
+    }
+});
+exports.deleteChat = deleteChat;
+const readMessageUpdate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { chatId, messageId } = req.params;
+    const userId = req.body.userId; // User who is reading the message
+    if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
+    try {
+        const chat = yield Chat_1.Chat.findOneAndUpdate({ _id: chatId, "messages._id": messageId }, { $addToSet: { "messages.$.readBy": userId } }, // ✅ Only adds user if not already present
+        { new: true });
+        if (!chat) {
+            return res.status(404).json({ error: "Chat or message not found" });
+        }
+        res.status(200).json({ success: true, chat });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+exports.readMessageUpdate = readMessageUpdate;

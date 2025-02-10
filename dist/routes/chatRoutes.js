@@ -13,7 +13,9 @@ router.get("/findChatId", chatControllers_1.findChatId);
 // Route to get chats of a user
 router.get("/:userId", chatControllers_1.getUserChats);
 // Route to send a message in a chat
-router.post("/send", chatControllers_1.sendMessage);
+router.post("/send/:chatId", chatControllers_1.sendMessage); //{ senderId, content }
 // Route to get all messages in a chat
 router.get("/messages/:chatId", chatControllers_1.getMessages);
+// Route to read updates in a chat
+router.post("/chat/:chatId/read/:messageId", chatControllers_1.readMessageUpdate); //{userId}
 exports.default = router;

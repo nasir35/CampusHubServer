@@ -11,6 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authorizeBatchAdmin = void 0;
 const Batch_1 = require("../models/Batch/Batch");
+const User_1 = require("../models/User");
+const Member_1 = require("../models/Batch/Member");
 const authorizeBatchAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!req.user) {
@@ -19,13 +21,19 @@ const authorizeBatchAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
         const { batchId } = req.params; // Get batchId from request params
         const userId = req.user.id;
         const batch = yield Batch_1.Batch.findById(batchId);
+        const user = yield User_1.User.findById(userId);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found" });
         }
         // Check if the user is an admin or moderator
-        const member = batch.membersList.find((m) => m.userId.toString() === userId);
-        if (!member || (member.role !== "admin" && member.role !== "moderator")) {
-            return res.status(403).json({ success: false, message: "Forbidden: Admin or Moderator access required" });
+        if ((user === null || user === void 0 ? void 0 : user.role) !== "Admin") {
+            const memberId = batch.membersList.find((m) => { var _a; return ((_a = m.userId) === null || _a === void 0 ? void 0 : _a.toString()) === userId.toString(); });
+            const member = yield Member_1.Member.findById(memberId);
+            if (!member || (member.role !== "admin" && member.role !== "moderator")) {
+                return res
+                    .status(403)
+                    .json({ success: false, message: "Forbidden: Admin or Moderator access required" });
+            }
         }
         next();
     }

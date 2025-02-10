@@ -49,29 +49,45 @@ const helper_1 = require("../../utils/helper");
 // Define Schema
 const BatchSchema = new mongoose_1.Schema({
     batchName: { type: String, required: true },
-    batchCode: { type: String, required: true },
+    batchCode: { type: String, required: true, unique: [true, "Batch code is required."] },
     institute: { type: String, required: true },
     description: { type: String },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
     batchType: { type: String, enum: ["Public", "Private"], default: "Public" },
-    batchPic: { type: String, default: "https://res.cloudinary.com/dax7yvopb/image/upload/v1739021465/group_d5hhyk.png" },
+    batchPic: {
+        type: String,
+        default: "https://res.cloudinary.com/dax7yvopb/image/upload/v1739021465/group_d5hhyk.png",
+    },
     // Relationships
+    chatId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Chat" },
     routines: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" }],
     currentRoutineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" },
     upcomingClasses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Schedule" }],
-    membersList: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Member" }],
+    membersList: [
+        {
+            userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+            memberId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Member", required: true },
+        },
+    ],
     announcements: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Announcement" }],
     resources: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Resource" }],
 }, { timestamps: true });
-// Pre-save Hook for Unique Code
 BatchSchema.pre("save", function (next) {
     return __awaiter(this, void 0, void 0, function* () {
         const batch = this;
+        // Only generate a batchCode if it is missing
         if (!batch.batchCode) {
-            batch.batchCode = (0, helper_1.generateUniqueCode)();
-        }
-        while (yield mongoose_1.default.models.Batch.findOne({ batchCode: batch.batchCode })) {
-            batch.batchCode = (0, helper_1.generateUniqueCode)();
+            let isUnique = false;
+            let newCode = "";
+            // Try generating a unique batchCode
+            while (!isUnique) {
+                newCode = (0, helper_1.generateUniqueCode)();
+                const existingBatch = yield mongoose_1.default.models.Batch.exists({ batchCode: newCode });
+                if (!existingBatch) {
+                    isUnique = true;
+                }
+            }
+            batch.batchCode = newCode;
         }
         next();
     });

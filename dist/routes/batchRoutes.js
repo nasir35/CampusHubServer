@@ -13,6 +13,8 @@ const router = express_1.default.Router();
 router.get("/", batchControllers_1.getBatches);
 // Get batch details by ID
 router.get("/:batchId", authMiddleware_1.authenticateUser, batchControllers_1.getBatchById);
+//Get all members of a  batch
+router.get("/members/:batchId", batchControllers_1.getAllMembers);
 // Create a new batch
 router.post("/create", authMiddleware_1.authenticateUser, batchControllers_1.createBatch); //{ batchName, description, batchType, institute, batchPic }
 // Add a member to the batch (only admins)
@@ -30,4 +32,5 @@ router.put("/schedule/:batchId", authMiddleware_1.authenticateUser, authorizeBat
 // }
 // Remove a member from the batch (only admins)
 router.delete("/remove/:batchId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, batchControllers_1.removeMember); //{ memberId }
+router.delete("/delete/:batchId", batchControllers_1.deleteBatch);
 exports.default = router;
