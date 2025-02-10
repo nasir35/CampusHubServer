@@ -8,10 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAnnouncement = exports.updateAnnouncement = exports.createAnnouncement = exports.getSingleAnnouncement = exports.getAnnouncements = void 0;
 const Announcement_1 = require("../../models/Batch/Announcement");
 const Batch_1 = require("../../models/Batch/Batch");
+const mongoose_1 = __importDefault(require("mongoose"));
 const getAnnouncements = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const announcements = yield Announcement_1.Announcement.find().sort({ createdAt: -1 });
@@ -86,16 +90,23 @@ exports.updateAnnouncement = updateAnnouncement;
 const deleteAnnouncement = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const { batchId } = req.body;
+        const batchId = req.header("batchId");
         // Delete the announcement
         const deletedAnnouncement = yield Announcement_1.Announcement.findByIdAndDelete(id);
         if (!deletedAnnouncement) {
             return res.status(404).json({ success: false, message: "Announcement not found" });
         }
         // Remove the announcement reference from the batch
-        yield Batch_1.Batch.findByIdAndUpdate(batchId, {
-            $pull: { announcements: id },
-        });
+        // await Batch.findByIdAndUpdate(batchId, {
+        //   $pull: { announcements: new mongoose.Types.ObjectId(id) },
+        // });
+        const batch = yield Batch_1.Batch.findById(batchId);
+        if (!batch) {
+            return res.status(404).json({ success: false, message: "Batch not found" });
+        }
+        const announcementObjectId = new mongoose_1.default.Types.ObjectId(id);
+        batch.announcements = batch.announcements.filter((announcementId) => !announcementId.equals(announcementObjectId));
+        yield batch.save();
         res.status(200).json({ success: true, message: "Announcement deleted successfully" });
     }
     catch (error) {

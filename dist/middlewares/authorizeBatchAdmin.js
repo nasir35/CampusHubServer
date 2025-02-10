@@ -22,8 +22,12 @@ const authorizeBatchAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
         let { batchId } = req.params;
         if (!batchId) {
             batchId = (_a = req.body) === null || _a === void 0 ? void 0 : _a.batchId;
-            if (!batchId)
-                return res.status(400).json({ success: false, message: "Batch ID is required" });
+            if (!batchId) {
+                batchId = req.header("batchId");
+                if (!batchId) {
+                    return res.status(400).json({ success: false, message: "Batch ID is required" });
+                }
+            }
         }
         const userId = req.user.id;
         const batch = yield Batch_1.Batch.findById(batchId);

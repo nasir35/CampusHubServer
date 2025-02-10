@@ -66,7 +66,7 @@ router.get("/announcements", authenticateUser, getAnnouncements);
 router.get("/announcements/:id", authenticateUser, getSingleAnnouncement);
 router.post("/announcements", authenticateUser, authorizeBatchAdmin, createAnnouncement); //{ title, message, batchId, createdBy }
 router.put("/announcements/update/:id", authenticateUser, authorizeBatchAdmin, updateAnnouncement); //{batchId, update }
-router.delete("/announcements/:id", authenticateUser, authorizeBatchAdmin, deleteAnnouncement); //{ batchId }
+router.delete("/announcements/:id", authenticateUser, authorizeBatchAdmin, deleteAnnouncement); //<header>{ batchId }
 
 /************************************************************************/
 

@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { Announcement } from "../../models/Batch/Announcement";
-import { Batch } from "../../models/Batch/Batch";
+import { Batch, IBatch } from "../../models/Batch/Batch";
 import { ApiResponse } from "../../types/response";
+import mongoose from "mongoose";
 
 export const getAnnouncements = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -97,7 +98,7 @@ export const deleteAnnouncement = async (
 ): Promise<any> => {
   try {
     const { id } = req.params;
-    const { batchId } = req.body;
+    const batchId = req.header("batchId");
 
     // Delete the announcement
     const deletedAnnouncement = await Announcement.findByIdAndDelete(id);
@@ -107,9 +108,22 @@ export const deleteAnnouncement = async (
     }
 
     // Remove the announcement reference from the batch
-    await Batch.findByIdAndUpdate(batchId, {
-      $pull: { announcements: id },
-    });
+    // await Batch.findByIdAndUpdate(batchId, {
+    //   $pull: { announcements: new mongoose.Types.ObjectId(id) },
+    // });
+    const batch: any = await Batch.findById(batchId);
+
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found" });
+    }
+
+    const announcementObjectId = new mongoose.Types.ObjectId(id);
+
+    batch.announcements = batch.announcements.filter(
+      (announcementId: mongoose.Types.ObjectId) => !announcementId.equals(announcementObjectId)
+    );
+
+    await batch.save();
 
     res.status(200).json({ success: true, message: "Announcement deleted successfully" });
   } catch (error) {
