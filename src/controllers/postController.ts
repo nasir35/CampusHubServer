@@ -127,7 +127,7 @@ export const deletePost = async (req: Request, res: Response<ApiResponse>): Prom
       return res.status(403).json({ success: false, message: "Unauthorized to delete post" });
     }
 
-    const response = await Post.findOneAndDelete({ _id: postId });
+    const response = await Post.findOneAndDelete({ _id: new mongoose.Types.ObjectId(postId) });
     if (user.role === "Admin" && authorId !== userId) {
       author.posts = author.posts.filter((id: any) => id.toString() !== postId.toString());
       author.save();

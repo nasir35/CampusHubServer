@@ -16,6 +16,7 @@ exports.deletePost = exports.updatePost = exports.addComment = exports.likePost 
 const Post_1 = __importDefault(require("../models/Post"));
 const asyncHandler_1 = __importDefault(require("../middlewares/asyncHandler"));
 const User_1 = require("../models/User");
+const mongoose_1 = __importDefault(require("mongoose"));
 exports.createPost = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { author, content, image } = req.body;
@@ -143,7 +144,7 @@ const deletePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (user.role !== "Admin" && authorId !== userId) {
             return res.status(403).json({ success: false, message: "Unauthorized to delete post" });
         }
-        const response = yield Post_1.default.findOneAndDelete({ _id: postId });
+        const response = yield Post_1.default.findOneAndDelete({ _id: new mongoose_1.default.Types.ObjectId(postId) });
         if (user.role === "Admin" && authorId !== userId) {
             author.posts = author.posts.filter((id) => id.toString() !== postId.toString());
             author.save();

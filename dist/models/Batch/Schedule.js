@@ -42,25 +42,32 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Schedule = exports.modifyTodayScheduleController = exports.getTodayClasses = void 0;
+exports.Schedule = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 // Define Schema
 const ScheduleSchema = new mongoose_1.Schema({
     batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
     subject: { type: String, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true },
-    dayOfWeek: { type: String, required: true },
+    startTime: { type: Date, required: true }, // Changed from string to Date
+    endTime: { type: Date, required: true }, // Changed from string to Date
+    dayOfWeek: {
+        type: String,
+        enum: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        required: true,
+    },
     routineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine", required: true },
     isCancelled: { type: Boolean, default: false },
+    classroom: { type: String, required: true }, // Added classroom field
+    isBreak: { type: Boolean, default: false }, // Added break support
+    group: { type: String, default: null }, // Added group support
 }, { timestamps: true });
-// Method to fetch all schedules for a specific batch
+// Fetch all schedules for a batch
 ScheduleSchema.methods.getScheduleForBatch = function (batchId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return this.model("Schedule").find({ batch: batchId, isCancelled: false });
+        return yield this.model("Schedule").find({ batch: batchId, isCancelled: false });
     });
 };
-// Method to modify schedule (add, delete, reschedule, or cancel)
+// Modify schedule (add, delete, reschedule, cancel)
 ScheduleSchema.methods.modifySchedule = function (action, data) {
     return __awaiter(this, void 0, void 0, function* () {
         const schedule = this;
@@ -101,65 +108,5 @@ ScheduleSchema.methods.modifySchedule = function (action, data) {
         return { success, message: responseMessage };
     });
 };
-// Function to get today's classes
-const getTodayClasses = function () {
-    return __awaiter(this, void 0, void 0, function* () {
-        const today = new Date();
-        const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" }); // Get current weekday (e.g., "Monday")
-        const schedulesForToday = yield this.model("Schedule")
-            .find({
-            batch: this.batch,
-            dayOfWeek,
-            isCancelled: false,
-        })
-            .populate("routineId"); // Assuming routineId is important to populate here.
-        return schedulesForToday;
-    });
-};
-exports.getTodayClasses = getTodayClasses;
-// Function to modify today's schedule (add, delete, reschedule, cancel)
-const modifyTodayScheduleController = function (action, subjectData) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const schedule = this;
-        let responseMessage = "";
-        let success = false;
-        const today = new Date();
-        const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" });
-        switch (action) {
-            case "add":
-                const newSchedule = new (this.model("Schedule"))(Object.assign(Object.assign({}, subjectData), { dayOfWeek: dayOfWeek, batch: schedule.batch }));
-                yield newSchedule.save();
-                responseMessage = "Class added successfully.";
-                success = true;
-                break;
-            case "delete":
-                yield this.model("Schedule").deleteOne({ _id: schedule._id, dayOfWeek: dayOfWeek });
-                responseMessage = "Class deleted successfully.";
-                success = true;
-                break;
-            case "reschedule":
-                if (subjectData.newTime) {
-                    schedule.startTime = subjectData.newTime;
-                    yield schedule.save();
-                    responseMessage = "Class rescheduled successfully.";
-                    success = true;
-                }
-                else {
-                    responseMessage = "New time is required for rescheduling.";
-                }
-                break;
-            case "cancel":
-                schedule.isCancelled = true;
-                yield schedule.save();
-                responseMessage = "Class cancelled successfully.";
-                success = true;
-                break;
-            default:
-                responseMessage = "Invalid action.";
-        }
-        return { success, message: responseMessage };
-    });
-};
-exports.modifyTodayScheduleController = modifyTodayScheduleController;
 // Export Model
 exports.Schedule = mongoose_1.default.model("Schedule", ScheduleSchema);

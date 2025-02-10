@@ -44,8 +44,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Batch = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const Schedule_1 = require("./Schedule");
 const helper_1 = require("../../utils/helper");
+const scheduleController_1 = require("../../controllers/BatchControllers/scheduleController");
 // Define Schema
 const BatchSchema = new mongoose_1.Schema({
     batchName: { type: String, required: true },
@@ -93,7 +93,7 @@ BatchSchema.pre("save", function (next) {
     });
 });
 // Attach Methods
-BatchSchema.methods.getTodayClasses = Schedule_1.getTodayClasses;
-BatchSchema.methods.modifyTodaySchedule = Schedule_1.modifyTodayScheduleController;
+BatchSchema.methods.getTodayClasses = scheduleController_1.getTodayClasses;
+BatchSchema.methods.modifyTodaySchedule = scheduleController_1.modifySchedule;
 // Export Model
 exports.Batch = mongoose_1.default.model("Batch", BatchSchema);

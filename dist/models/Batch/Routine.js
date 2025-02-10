@@ -44,12 +44,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Routine = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+const Schedule_1 = require("./Schedule");
 // Define Schema
 const RoutineSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
+    batchId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
     schedules: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Schedule" }],
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
     status: { type: String, enum: ["active", "archived", "completed"], default: "active" },
@@ -57,37 +58,21 @@ const RoutineSchema = new mongoose_1.Schema({
 // Method to get active schedules for this routine
 RoutineSchema.methods.getActiveSchedules = function () {
     return __awaiter(this, void 0, void 0, function* () {
-        const routine = this;
-        return yield mongoose_1.default.model("Schedule").find({ routineId: routine._id, isCancelled: false });
+        return yield Schedule_1.Schedule.find({ routineId: this._id, isCancelled: false });
     });
 };
-// Method to add a schedule to this routine
+// Method to add a schedule
 RoutineSchema.methods.addSchedule = function (scheduleId) {
     return __awaiter(this, void 0, void 0, function* () {
-        const routine = this;
-        if (!routine.schedules.includes(scheduleId)) {
-            routine.schedules.push(scheduleId);
-            yield routine.save();
-            return { success: true, message: "Schedule added to routine." };
-        }
-        else {
-            return { success: false, message: "Schedule already exists in routine." };
-        }
+        this.schedules.push(scheduleId);
+        yield this.save();
     });
 };
-// Method to remove a schedule from this routine
+// Method to remove a schedule
 RoutineSchema.methods.removeSchedule = function (scheduleId) {
     return __awaiter(this, void 0, void 0, function* () {
-        const routine = this;
-        const index = routine.schedules.indexOf(scheduleId);
-        if (index > -1) {
-            routine.schedules.splice(index, 1);
-            yield routine.save();
-            return { success: true, message: "Schedule removed from routine." };
-        }
-        else {
-            return { success: false, message: "Schedule not found in routine." };
-        }
+        this.schedules = this.schedules.filter((id) => id.toString() !== scheduleId.toString());
+        yield this.save();
     });
 };
 // Export Model

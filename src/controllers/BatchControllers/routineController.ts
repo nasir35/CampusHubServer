@@ -1,58 +1,47 @@
 import { Request, Response } from "express";
-import { AuthReq } from "../../middlewares/authMiddleware";
-import {Batch} from "../../models/Batch/Batch";
-import { Types } from "mongoose";
+import { Routine } from "../../models/Batch/Routine";
 
-// Set a new routine and make it active
-export const setActiveRoutine = async (req: AuthReq, res: Response) => {
+export const createRoutine = async (req: Request, res: Response) => {
   try {
-    const { batchId, routineId } = req.params;
+    const { name, startDate, endDate, batchId, createdBy } = req.body;
 
-    const batch = await Batch.findById(batchId);
-    if (!batch) return res.status(404).json({ success: false, message: "Batch not found" });
+    const routine = new Routine({
+      name,
+      startDate,
+      endDate,
+      batchId,
+      createdBy,
+    });
 
-    if (!batch.routines.some((r) => r.toString() === routineId)) {
-      return res.status(400).json({ success: false, message: "Routine does not belong to this batch" });
-    }
-
-    batch.currentRoutineId = new Types.ObjectId(routineId);
-    await batch.save();
-
-    res.json({ success: true, message: "Routine set as active" });
+    await routine.save();
+    res.status(201).json({ success: true, routine });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error });
+    res.status(500).json({ success: false, message: "Error creating routine", error });
   }
 };
 
-// Fetch today's schedule
-export const getTodaySchedule = async (req: AuthReq, res: Response) => {
+// Get all routines for a batch
+export const getRoutinesForBatch = async (req: Request, res: Response) => {
   try {
     const { batchId } = req.params;
-    const batch = await Batch.findById(batchId).populate("routines");
-
-    if (!batch) return res.status(404).json({ success: false, message: "Batch not found" });
-
-    const todayClasses = batch.getTodayClasses();
-    res.json({ success: true, data: todayClasses });
+    const routines = await Routine.find({ batchId });
+    res.status(200).json({ success: true, routines });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error });
+    res.status(500).json({ success: false, message: "Error fetching routines", error });
   }
 };
 
-// Modify today's schedule (admin only)
-export const modifySchedule = async (req: AuthReq, res: Response) => {
+// Archive a routine
+export const archiveRoutine = async (req: Request, res: Response) => {
   try {
-    const { batchId } = req.params;
-    const { action, subject, newTime } = req.body;
-
-    const batch = await Batch.findById(batchId);
-    if (!batch) return res.status(404).json({ success: false, message: "Batch not found" });
-
-    const result = batch.modifyTodaySchedule(action, { subject, newTime });
-    await batch.save();
-
-    res.json(result);
+    const { routineId } = req.params;
+    const routine = await Routine.findByIdAndUpdate(
+      routineId,
+      { status: "archived" },
+      { new: true }
+    );
+    res.status(200).json({ success: true, routine });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error });
+    res.status(500).json({ success: false, message: "Error archiving routine", error });
   }
 };

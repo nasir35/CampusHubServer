@@ -1,10 +1,13 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { IRoutine } from "./Routine";
-import { modifyTodayScheduleController, getTodayClasses, ISchedule } from "./Schedule";
-import { IMember } from "./Member";
+import { ISchedule } from "./Schedule";
 import { IAnnouncement } from "./Announcement";
 import { IResource } from "./Resources";
 import { generateUniqueCode } from "../../utils/helper";
+import {
+  getTodayClasses,
+  modifySchedule,
+} from "../../controllers/BatchControllers/scheduleController";
 
 interface memberListType {
   userId: Types.ObjectId;
@@ -92,7 +95,7 @@ BatchSchema.pre("save", async function (next) {
 
 // Attach Methods
 BatchSchema.methods.getTodayClasses = getTodayClasses;
-BatchSchema.methods.modifyTodaySchedule = modifyTodayScheduleController;
+BatchSchema.methods.modifyTodaySchedule = modifySchedule;
 
 // Export Model
 export const Batch = mongoose.model<IBatch>("Batch", BatchSchema);

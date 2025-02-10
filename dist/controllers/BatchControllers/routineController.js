@@ -9,57 +9,47 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.modifySchedule = exports.getTodaySchedule = exports.setActiveRoutine = void 0;
-const Batch_1 = require("../../models/Batch/Batch");
-const mongoose_1 = require("mongoose");
-// Set a new routine and make it active
-const setActiveRoutine = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.archiveRoutine = exports.getRoutinesForBatch = exports.createRoutine = void 0;
+const Routine_1 = require("../../models/Batch/Routine");
+const createRoutine = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { batchId, routineId } = req.params;
-        const batch = yield Batch_1.Batch.findById(batchId);
-        if (!batch)
-            return res.status(404).json({ success: false, message: "Batch not found" });
-        if (!batch.routines.some((r) => r.toString() === routineId)) {
-            return res.status(400).json({ success: false, message: "Routine does not belong to this batch" });
-        }
-        batch.currentRoutineId = new mongoose_1.Types.ObjectId(routineId);
-        yield batch.save();
-        res.json({ success: true, message: "Routine set as active" });
+        const { name, startDate, endDate, batchId, createdBy } = req.body;
+        const routine = new Routine_1.Routine({
+            name,
+            startDate,
+            endDate,
+            batchId,
+            createdBy,
+        });
+        yield routine.save();
+        res.status(201).json({ success: true, routine });
     }
     catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        res.status(500).json({ success: false, message: "Error creating routine", error });
     }
 });
-exports.setActiveRoutine = setActiveRoutine;
-// Fetch today's schedule
-const getTodaySchedule = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.createRoutine = createRoutine;
+// Get all routines for a batch
+const getRoutinesForBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { batchId } = req.params;
-        const batch = yield Batch_1.Batch.findById(batchId).populate("routines");
-        if (!batch)
-            return res.status(404).json({ success: false, message: "Batch not found" });
-        const todayClasses = batch.getTodayClasses();
-        res.json({ success: true, data: todayClasses });
+        const routines = yield Routine_1.Routine.find({ batchId });
+        res.status(200).json({ success: true, routines });
     }
     catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        res.status(500).json({ success: false, message: "Error fetching routines", error });
     }
 });
-exports.getTodaySchedule = getTodaySchedule;
-// Modify today's schedule (admin only)
-const modifySchedule = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getRoutinesForBatch = getRoutinesForBatch;
+// Archive a routine
+const archiveRoutine = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { batchId } = req.params;
-        const { action, subject, newTime } = req.body;
-        const batch = yield Batch_1.Batch.findById(batchId);
-        if (!batch)
-            return res.status(404).json({ success: false, message: "Batch not found" });
-        const result = batch.modifyTodaySchedule(action, { subject, newTime });
-        yield batch.save();
-        res.json(result);
+        const { routineId } = req.params;
+        const routine = yield Routine_1.Routine.findByIdAndUpdate(routineId, { status: "archived" }, { new: true });
+        res.status(200).json({ success: true, routine });
     }
     catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        res.status(500).json({ success: false, message: "Error archiving routine", error });
     }
 });
-exports.modifySchedule = modifySchedule;
+exports.archiveRoutine = archiveRoutine;

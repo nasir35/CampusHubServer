@@ -7,7 +7,7 @@ const express_1 = __importDefault(require("express"));
 const batchControllers_1 = require("../controllers/BatchControllers/batchControllers");
 const authMiddleware_1 = require("../middlewares/authMiddleware");
 const authorizeBatchAdmin_1 = require("../middlewares/authorizeBatchAdmin");
-const Schedule_1 = require("../models/Batch/Schedule");
+// import { modifyTodayScheduleController } from "../models/Batch/Schedule";
 const announcementController_1 = require("../controllers/BatchControllers/announcementController");
 const router = express_1.default.Router();
 // Get all batches
@@ -23,7 +23,12 @@ router.post("/add/:batchId", authMiddleware_1.authenticateUser, authorizeBatchAd
 // Update batch info (only admins/moderators)
 router.put("/update/:batchId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, batchControllers_1.updateBatch); //{updateData}
 // Modify today's schedule (cancel/reschedule/add/delete classes)
-router.put("/schedule/:batchId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, Schedule_1.modifyTodayScheduleController); //{ action, subjectData }
+// router.put(
+//   "/schedule/:batchId",
+//   authenticateUser,
+//   authorizeBatchAdmin,
+//   modifyTodayScheduleController
+// ); //{ action, subjectData }
 // {
 //   days: string[]; // e.g., ["Monday", "Wednesday"]
 //   time: string; // e.g., "10:00 AM - 12:00 PM"
