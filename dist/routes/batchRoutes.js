@@ -9,6 +9,8 @@ const authMiddleware_1 = require("../middlewares/authMiddleware");
 const authorizeBatchAdmin_1 = require("../middlewares/authorizeBatchAdmin");
 // import { modifyTodayScheduleController } from "../models/Batch/Schedule";
 const announcementController_1 = require("../controllers/BatchControllers/announcementController");
+const routineController_1 = require("../controllers/BatchControllers/routineController");
+const scheduleController_1 = require("../controllers/BatchControllers/scheduleController");
 const router = express_1.default.Router();
 // Get all batches
 router.get("/", batchControllers_1.getBatches);
@@ -18,6 +20,8 @@ router.get("/details/:batchId", authMiddleware_1.authenticateUser, batchControll
 router.get("/members/:batchId", batchControllers_1.getAllMembers);
 // Create a new batch
 router.post("/create", authMiddleware_1.authenticateUser, batchControllers_1.createBatch); //{ batchName, description, batchType, institute, batchPic }
+router.post("/join/:batchId", authMiddleware_1.authenticateUser, batchControllers_1.joinBatchController);
+router.post("/leave/:batchId", authMiddleware_1.authenticateUser, batchControllers_1.leaveBatch);
 // Add a member to the batch (only admins)
 router.post("/add/:batchId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, batchControllers_1.addMember); //{ userId, role }
 // Update batch info (only admins/moderators)
@@ -46,5 +50,11 @@ router.get("/announcements/:id", authMiddleware_1.authenticateUser, announcement
 router.post("/announcements", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.createAnnouncement); //{ title, message, batchId, createdBy }
 router.put("/announcements/update/:id", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.updateAnnouncement); //{batchId, update }
 router.delete("/announcements/:id", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.deleteAnnouncement); //<header>{ batchId }
-/************************************************************************/
+/****************************Routine Routes******************************* */
+router.get("/routines/:batchId", authMiddleware_1.authenticateUser, routineController_1.getRoutinesForBatch);
+router.post("/routines/create", authMiddleware_1.authenticateUser, routineController_1.createRoutine); //{ name, startDate, endDate, batchId, createdBy, status }
+router.post("/routines/status/:routineId", routineController_1.archiveRoutine);
+/****************************Schedule Routes******************************* */
+router.post("/schedules/create", scheduleController_1.createSchedule); //{ batch, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
+router.get("/schedules/:routineId", scheduleController_1.getSchedulesForRoutine); //{batchId}
 exports.default = router;

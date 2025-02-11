@@ -8,24 +8,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.modifySchedule = exports.getTodayClasses = exports.getSchedulesForRoutine = exports.createSchedule = void 0;
 const Schedule_1 = require("../../models/Batch/Schedule");
+const Routine_1 = require("../../models/Batch/Routine");
+const Batch_1 = require("../../models/Batch/Batch");
+const mongoose_1 = __importDefault(require("mongoose"));
 const createSchedule = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { batch, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group } = req.body;
+        const { batchId, subject, startTime, endTime, daysOfWeek, routineId, classroom, group } = req.body;
         const schedule = new Schedule_1.Schedule({
-            batch,
+            batchId,
             subject,
             startTime,
             endTime,
-            dayOfWeek,
+            daysOfWeek,
             routineId,
             classroom,
-            isBreak,
             group,
         });
+        const batch = yield Batch_1.Batch.findById(batchId);
+        const routine = yield Routine_1.Routine.findById(batch === null || batch === void 0 ? void 0 : batch.currentRoutineId);
+        if (!batch || !routine) {
+            return res.status(404).json({ success: false, message: "Batch or routine not found" });
+        }
+        routine.schedules.push(schedule._id);
         yield schedule.save();
+        yield routine.save();
         res.status(201).json({ success: true, schedule });
     }
     catch (error) {
@@ -37,7 +49,7 @@ exports.createSchedule = createSchedule;
 const getSchedulesForRoutine = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { routineId } = req.params;
-        const schedules = yield Schedule_1.Schedule.find({ routineId });
+        const schedules = yield Schedule_1.Schedule.find({ routineId: new mongoose_1.default.Types.ObjectId(routineId) });
         res.status(200).json({ success: true, schedules });
     }
     catch (error) {

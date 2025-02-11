@@ -2,11 +2,11 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 // Define Schedule Interface
 export interface ISchedule extends Document {
-  batch: Types.ObjectId; // Reference to Batch
+  batchId: Types.ObjectId; // Reference to Batch
   subject: string; // Name of the subject
   startTime: Date; // Time when the class starts
   endTime: Date; // Time when the class ends
-  dayOfWeek: string; // Day of the week (e.g., "Monday")
+  daysOfWeek: string[]; // Day of the week (e.g., "Monday")
   routineId: Types.ObjectId; // Reference to Routine
   isCancelled: boolean; // Status of the class
   classroom: string;
@@ -24,19 +24,18 @@ export interface ISchedule extends Document {
 // Define Schema
 const ScheduleSchema = new Schema<ISchedule>(
   {
-    batch: { type: Schema.Types.ObjectId, ref: "Batch", required: true },
+    batchId: { type: Schema.Types.ObjectId, ref: "Batch", required: true },
     subject: { type: String, required: true },
-    startTime: { type: Date, required: true }, // Changed from string to Date
-    endTime: { type: Date, required: true }, // Changed from string to Date
-    dayOfWeek: {
-      type: String,
+    startTime: { type: Date }, // Changed from string to Date
+    endTime: { type: Date }, // Changed from string to Date
+    daysOfWeek: {
+      type: [String],
       enum: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
       required: true,
     },
     routineId: { type: Schema.Types.ObjectId, ref: "Routine", required: true },
     isCancelled: { type: Boolean, default: false },
     classroom: { type: String, required: true }, // Added classroom field
-    isBreak: { type: Boolean, default: false }, // Added break support
     group: { type: String, default: null }, // Added group support
   },
   { timestamps: true }

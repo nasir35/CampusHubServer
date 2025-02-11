@@ -49,7 +49,7 @@ const Schedule_1 = require("./Schedule");
 const RoutineSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    endDate: { type: Date },
     batchId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
     schedules: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Schedule" }],
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },

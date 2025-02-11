@@ -22,7 +22,7 @@ const RoutineSchema = new Schema<IRoutine>(
   {
     name: { type: String, required: true },
     startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    endDate: { type: Date },
     batchId: { type: Schema.Types.ObjectId, ref: "Batch", required: true },
     schedules: [{ type: Schema.Types.ObjectId, ref: "Schedule" }],
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

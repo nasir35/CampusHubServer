@@ -23,7 +23,6 @@ export interface IBatch extends Document {
   batchType: "Public" | "Private";
   batchPic?: string;
   chatId: Types.ObjectId;
-  routines: IRoutine[];
   currentRoutineId: Types.ObjectId;
   upcomingClasses: ISchedule[];
   membersList: memberListType[];
@@ -54,7 +53,6 @@ const BatchSchema = new Schema<IBatch>(
 
     // Relationships
     chatId: { type: Schema.Types.ObjectId, ref: "Chat" },
-    routines: [{ type: Schema.Types.ObjectId, ref: "Routine" }],
     currentRoutineId: { type: Schema.Types.ObjectId, ref: "Routine" },
     upcomingClasses: [{ type: Schema.Types.ObjectId, ref: "Schedule" }],
     membersList: [

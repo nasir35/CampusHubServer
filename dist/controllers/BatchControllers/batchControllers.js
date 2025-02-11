@@ -100,8 +100,12 @@ const getBatchById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 exports.getBatchById = getBatchById;
 // Controller to join a batch
 const joinBatchController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { batchId } = req.params;
-    const { userId } = req.body;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
     try {
         const batch = yield Batch_1.Batch.findById(batchId);
         if (!batch) {
@@ -126,7 +130,10 @@ const joinBatchController = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
         yield newMember.save();
         // Update the batch's membersList with the new member
-        batch.membersList.push({ userId, memberId: newMember._id }); // Add member to the batch
+        batch.membersList.push({
+            userId: new mongoose_1.default.Types.ObjectId(userId),
+            memberId: newMember._id,
+        }); // Add member to the batch
         yield batch.save();
         const user = yield User_1.User.findById(userId);
         if (user) {
@@ -338,8 +345,8 @@ const deleteBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         yield Announcement_1.Announcement.deleteMany({ _id: { $in: batch.announcements } });
         yield Resources_1.Resource.deleteMany({ _id: { $in: batch.resources } });
         yield Member_1.Member.deleteMany({ _id: { $in: batch.membersList } });
-        yield Routine_1.Routine.deleteMany({ _id: { $in: batch.routines } });
-        yield Schedule_1.Schedule.deleteMany({ _id: { $in: batch.upcomingClasses } });
+        yield Routine_1.Routine.deleteMany({ batchId: batch._id });
+        yield Schedule_1.Schedule.deleteMany({ batchId: batch._id });
         // Finally, delete the batch
         yield Batch_1.Batch.findByIdAndDelete(batchId);
         return res.status(200).json({ success: true, message: "Batch deleted successfully" });

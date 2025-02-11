@@ -6,6 +6,8 @@ import {
   getAllMembers,
   getBatchById,
   getBatches,
+  joinBatchController,
+  leaveBatch,
   removeMember,
   updateBatch,
 } from "../controllers/BatchControllers/batchControllers";
@@ -19,6 +21,15 @@ import {
   deleteAnnouncement,
   getSingleAnnouncement,
 } from "../controllers/BatchControllers/announcementController";
+import {
+  archiveRoutine,
+  createRoutine,
+  getRoutinesForBatch,
+} from "../controllers/BatchControllers/routineController";
+import {
+  createSchedule,
+  getSchedulesForRoutine,
+} from "../controllers/BatchControllers/scheduleController";
 
 const router = express.Router();
 
@@ -32,6 +43,9 @@ router.get("/members/:batchId", getAllMembers);
 
 // Create a new batch
 router.post("/create", authenticateUser, createBatch); //{ batchName, description, batchType, institute, batchPic }
+
+router.post("/join/:batchId", authenticateUser, joinBatchController);
+router.post("/leave/:batchId", authenticateUser, leaveBatch);
 
 // Add a member to the batch (only admins)
 router.post("/add/:batchId", authenticateUser, authorizeBatchAdmin, addMember); //{ userId, role }
@@ -68,6 +82,13 @@ router.post("/announcements", authenticateUser, authorizeBatchAdmin, createAnnou
 router.put("/announcements/update/:id", authenticateUser, authorizeBatchAdmin, updateAnnouncement); //{batchId, update }
 router.delete("/announcements/:id", authenticateUser, authorizeBatchAdmin, deleteAnnouncement); //<header>{ batchId }
 
-/************************************************************************/
+/****************************Routine Routes******************************* */
+router.get("/routines/:batchId", authenticateUser, getRoutinesForBatch);
+router.post("/routines/create", authenticateUser, createRoutine); //{ name, startDate, endDate, batchId, createdBy, status }
+router.post("/routines/status/:routineId", archiveRoutine);
+
+/****************************Schedule Routes******************************* */
+router.post("/schedules/create", createSchedule); //{ batch, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
+router.get("/schedules/:routineId", getSchedulesForRoutine); //{batchId}
 
 export default router;

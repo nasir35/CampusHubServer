@@ -46,19 +46,18 @@ exports.Schedule = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 // Define Schema
 const ScheduleSchema = new mongoose_1.Schema({
-    batch: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
+    batchId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Batch", required: true },
     subject: { type: String, required: true },
-    startTime: { type: Date, required: true }, // Changed from string to Date
-    endTime: { type: Date, required: true }, // Changed from string to Date
-    dayOfWeek: {
-        type: String,
+    startTime: { type: Date }, // Changed from string to Date
+    endTime: { type: Date }, // Changed from string to Date
+    daysOfWeek: {
+        type: [String],
         enum: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
         required: true,
     },
     routineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine", required: true },
     isCancelled: { type: Boolean, default: false },
     classroom: { type: String, required: true }, // Added classroom field
-    isBreak: { type: Boolean, default: false }, // Added break support
     group: { type: String, default: null }, // Added group support
 }, { timestamps: true });
 // Fetch all schedules for a batch

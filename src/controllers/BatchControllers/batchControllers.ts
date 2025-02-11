@@ -97,9 +97,12 @@ export const getBatchById = async (req: Request, res: Response): Promise<any> =>
 };
 
 // Controller to join a batch
-export const joinBatchController = async (req: Request, res: Response) => {
+export const joinBatchController = async (req: AuthReq, res: Response): Promise<any> => {
   const { batchId } = req.params;
-  const { userId } = req.body;
+  const userId = req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
 
   try {
     const batch = await Batch.findById(batchId);
@@ -129,7 +132,10 @@ export const joinBatchController = async (req: Request, res: Response) => {
     await newMember.save();
 
     // Update the batch's membersList with the new member
-    batch.membersList.push({ userId, memberId: newMember._id }); // Add member to the batch
+    batch.membersList.push({
+      userId: new mongoose.Types.ObjectId(userId),
+      memberId: newMember._id,
+    }); // Add member to the batch
     await batch.save();
 
     const user: any = await User.findById(userId);
@@ -394,8 +400,8 @@ export const deleteBatch = async (req: Request, res: Response): Promise<any> => 
     await Announcement.deleteMany({ _id: { $in: batch.announcements } });
     await Resource.deleteMany({ _id: { $in: batch.resources } });
     await Member.deleteMany({ _id: { $in: batch.membersList } });
-    await Routine.deleteMany({ _id: { $in: batch.routines } });
-    await Schedule.deleteMany({ _id: { $in: batch.upcomingClasses } });
+    await Routine.deleteMany({ batchId: batch._id });
+    await Schedule.deleteMany({ batchId: batch._id });
 
     // Finally, delete the batch
     await Batch.findByIdAndDelete(batchId);

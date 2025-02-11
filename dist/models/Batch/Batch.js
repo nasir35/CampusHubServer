@@ -60,7 +60,6 @@ const BatchSchema = new mongoose_1.Schema({
     },
     // Relationships
     chatId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Chat" },
-    routines: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" }],
     currentRoutineId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Routine" },
     upcomingClasses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Schedule" }],
     membersList: [
