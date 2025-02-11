@@ -29,6 +29,9 @@ import {
 import {
   createSchedule,
   getSchedulesForRoutine,
+  getTodayClasses,
+  getTomorrowsClasses,
+  modifySchedule,
 } from "../controllers/BatchControllers/scheduleController";
 
 const router = express.Router();
@@ -88,7 +91,10 @@ router.post("/routines/create", authenticateUser, createRoutine); //{ name, star
 router.post("/routines/status/:routineId", archiveRoutine);
 
 /****************************Schedule Routes******************************* */
-router.post("/schedules/create", createSchedule); //{ batch, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
-router.get("/schedules/:routineId", getSchedulesForRoutine); //{batchId}
+router.post("/schedules/create", authenticateUser, authorizeBatchAdmin, createSchedule); //{ batchId, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
+router.get("/schedules/:routineId", authenticateUser, getSchedulesForRoutine); //{batchId}
+router.get("/schedules/today-classes/:batchId", authenticateUser, getTodayClasses);
+router.get("/schedules/tomorrow-classes/:batchId", authenticateUser, getTomorrowsClasses);
+router.put("/schedules/modify/:scheduleId", authenticateUser, authorizeBatchAdmin, modifySchedule); // {batchId, action, updateData} Note: allowed action type: 'add', 'update', 'cancel', 'delete'
 
 export default router;

@@ -74,6 +74,9 @@ ScheduleSchema.methods.modifySchedule = function (action, data) {
         let success = false;
         switch (action) {
             case "add":
+                if (!data.batchId || !data.subject || !data.startTime || !data.endTime || !data.daysOfWeek) {
+                    return { success: false, message: "Missing required fields for adding a schedule." };
+                }
                 const newSchedule = new (this.model("Schedule"))(data);
                 yield newSchedule.save();
                 responseMessage = "Class added successfully.";
@@ -84,16 +87,14 @@ ScheduleSchema.methods.modifySchedule = function (action, data) {
                 responseMessage = "Class deleted successfully.";
                 success = true;
                 break;
-            case "reschedule":
-                if (data.newTime) {
-                    schedule.startTime = data.newTime;
-                    yield schedule.save();
-                    responseMessage = "Class rescheduled successfully.";
-                    success = true;
+            case "update":
+                if (Object.keys(data).length === 0) {
+                    return { success: false, message: "No updates provided." };
                 }
-                else {
-                    responseMessage = "New time is required for rescheduling.";
-                }
+                Object.assign(schedule, data);
+                yield schedule.save();
+                responseMessage = "Class updated successfully.";
+                success = true;
                 break;
             case "cancel":
                 schedule.isCancelled = true;

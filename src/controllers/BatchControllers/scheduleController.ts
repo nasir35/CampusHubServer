@@ -52,7 +52,7 @@ export const getTodayClasses = async (req: Request, res: Response) => {
     const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" });
 
     const schedulesForToday = await Schedule.find({
-      dayOfWeek,
+      daysOfWeek: { $in: [dayOfWeek] }, // Check if today's day exists in the array
       isCancelled: false,
     });
 
@@ -63,17 +63,42 @@ export const getTodayClasses = async (req: Request, res: Response) => {
 };
 
 // Modify schedule (add, delete, reschedule, cancel)
-export const modifySchedule = async (req: Request, res: Response) => {
+export const modifySchedule = async (req: Request, res: Response): Promise<any> => {
   try {
     const { scheduleId } = req.params;
-    const { action, newTime } = req.body;
+    const { action, ...updateData } = req.body;
+
+    if (action === "add") {
+      // Directly call the model to create a new schedule
+      const result = await new Schedule().modifySchedule("add", updateData);
+      return res.status(201).json(result);
+    }
 
     const schedule = await Schedule.findById(scheduleId);
     if (!schedule) return res.status(404).json({ success: false, message: "Schedule not found" });
 
-    const result = await schedule.modifySchedule(action, { newTime });
-    res.status(200).json({ success: result.success, message: result.message });
+    const result = await schedule.modifySchedule(action, updateData);
+    res.status(result.success ? 200 : 400).json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: "Error modifying schedule", error });
+  }
+};
+
+export const getTomorrowsClasses = async (req: Request, res: Response) => {
+  try {
+    // Get tomorrow's day name
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayOfWeek = tomorrow.toLocaleString("en-US", { weekday: "long" });
+
+    // Find all schedules where tomorrow's day exists in `daysOfWeek`
+    const schedulesForTomorrow = await Schedule.find({
+      daysOfWeek: { $in: [dayOfWeek] },
+      isCancelled: false,
+    });
+
+    res.status(200).json({ success: true, tomorrowClasses: schedulesForTomorrow });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching tomorrow's classes", error });
   }
 };

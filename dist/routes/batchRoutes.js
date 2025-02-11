@@ -55,6 +55,9 @@ router.get("/routines/:batchId", authMiddleware_1.authenticateUser, routineContr
 router.post("/routines/create", authMiddleware_1.authenticateUser, routineController_1.createRoutine); //{ name, startDate, endDate, batchId, createdBy, status }
 router.post("/routines/status/:routineId", routineController_1.archiveRoutine);
 /****************************Schedule Routes******************************* */
-router.post("/schedules/create", scheduleController_1.createSchedule); //{ batch, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
-router.get("/schedules/:routineId", scheduleController_1.getSchedulesForRoutine); //{batchId}
+router.post("/schedules/create", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, scheduleController_1.createSchedule); //{ batchId, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
+router.get("/schedules/:routineId", authMiddleware_1.authenticateUser, scheduleController_1.getSchedulesForRoutine); //{batchId}
+router.get("/schedules/today-classes/:batchId", authMiddleware_1.authenticateUser, scheduleController_1.getTodayClasses);
+router.get("/schedules/tomorrow-classes/:batchId", authMiddleware_1.authenticateUser, scheduleController_1.getTomorrowsClasses);
+router.put("/schedules/modify/:scheduleId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, scheduleController_1.modifySchedule); // {batchId, action, updateData} Note: allowed action type: 'add', 'update', 'cancel', 'delete'
 exports.default = router;

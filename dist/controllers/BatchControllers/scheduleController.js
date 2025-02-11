@@ -8,11 +8,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.modifySchedule = exports.getTodayClasses = exports.getSchedulesForRoutine = exports.createSchedule = void 0;
+exports.getTomorrowsClasses = exports.modifySchedule = exports.getTodayClasses = exports.getSchedulesForRoutine = exports.createSchedule = void 0;
 const Schedule_1 = require("../../models/Batch/Schedule");
 const Routine_1 = require("../../models/Batch/Routine");
 const Batch_1 = require("../../models/Batch/Batch");
@@ -63,7 +74,7 @@ const getTodayClasses = (req, res) => __awaiter(void 0, void 0, void 0, function
         const today = new Date();
         const dayOfWeek = today.toLocaleString("en-US", { weekday: "long" });
         const schedulesForToday = yield Schedule_1.Schedule.find({
-            dayOfWeek,
+            daysOfWeek: { $in: [dayOfWeek] }, // Check if today's day exists in the array
             isCancelled: false,
         });
         res.status(200).json({ success: true, schedules: schedulesForToday });
@@ -77,15 +88,38 @@ exports.getTodayClasses = getTodayClasses;
 const modifySchedule = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { scheduleId } = req.params;
-        const { action, newTime } = req.body;
+        const _a = req.body, { action } = _a, updateData = __rest(_a, ["action"]);
+        if (action === "add") {
+            // Directly call the model to create a new schedule
+            const result = yield new Schedule_1.Schedule().modifySchedule("add", updateData);
+            return res.status(201).json(result);
+        }
         const schedule = yield Schedule_1.Schedule.findById(scheduleId);
         if (!schedule)
             return res.status(404).json({ success: false, message: "Schedule not found" });
-        const result = yield schedule.modifySchedule(action, { newTime });
-        res.status(200).json({ success: result.success, message: result.message });
+        const result = yield schedule.modifySchedule(action, updateData);
+        res.status(result.success ? 200 : 400).json(result);
     }
     catch (error) {
         res.status(500).json({ success: false, message: "Error modifying schedule", error });
     }
 });
 exports.modifySchedule = modifySchedule;
+const getTomorrowsClasses = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Get tomorrow's day name
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dayOfWeek = tomorrow.toLocaleString("en-US", { weekday: "long" });
+        // Find all schedules where tomorrow's day exists in `daysOfWeek`
+        const schedulesForTomorrow = yield Schedule_1.Schedule.find({
+            daysOfWeek: { $in: [dayOfWeek] },
+            isCancelled: false,
+        });
+        res.status(200).json({ success: true, tomorrowClasses: schedulesForTomorrow });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: "Error fetching tomorrow's classes", error });
+    }
+});
+exports.getTomorrowsClasses = getTomorrowsClasses;

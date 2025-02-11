@@ -16,7 +16,7 @@ export interface ISchedule extends Document {
   updatedAt: Date;
   getScheduleForBatch: (batchId: Types.ObjectId) => ISchedule[]; // Method to get schedules for a specific batch
   modifySchedule: (
-    action: "add" | "delete" | "reschedule" | "cancel",
+    action: "add" | "delete" | "update" | "cancel",
     data: Partial<ISchedule> & { newTime?: string }
   ) => { success: boolean; message: string }; // Method to modify schedule
 }
@@ -48,8 +48,8 @@ ScheduleSchema.methods.getScheduleForBatch = async function (batchId: Types.Obje
 
 // Modify schedule (add, delete, reschedule, cancel)
 ScheduleSchema.methods.modifySchedule = async function (
-  action: "add" | "delete" | "reschedule" | "cancel",
-  data: Partial<ISchedule> & { newTime?: Date }
+  action: "add" | "delete" | "update" | "cancel",
+  data: Partial<ISchedule>
 ) {
   const schedule = this as ISchedule;
   let responseMessage = "";
@@ -57,6 +57,9 @@ ScheduleSchema.methods.modifySchedule = async function (
 
   switch (action) {
     case "add":
+      if (!data.batchId || !data.subject || !data.startTime || !data.endTime || !data.daysOfWeek) {
+        return { success: false, message: "Missing required fields for adding a schedule." };
+      }
       const newSchedule = new (this.model("Schedule") as mongoose.Model<ISchedule>)(data);
       await newSchedule.save();
       responseMessage = "Class added successfully.";
@@ -69,15 +72,14 @@ ScheduleSchema.methods.modifySchedule = async function (
       success = true;
       break;
 
-    case "reschedule":
-      if (data.newTime) {
-        schedule.startTime = data.newTime;
-        await schedule.save();
-        responseMessage = "Class rescheduled successfully.";
-        success = true;
-      } else {
-        responseMessage = "New time is required for rescheduling.";
+    case "update":
+      if (Object.keys(data).length === 0) {
+        return { success: false, message: "No updates provided." };
       }
+      Object.assign(schedule, data);
+      await schedule.save();
+      responseMessage = "Class updated successfully.";
+      success = true;
       break;
 
     case "cancel":

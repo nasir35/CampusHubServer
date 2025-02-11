@@ -56,7 +56,7 @@ const createBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         yield newBatch.save();
         console.log("Batch saved successfully");
         // Add chat & batch reference to all members
-        yield User_1.User.updateMany({ _id: { $in: members } }, { $set: { batchChatId: newChat._id, batchId: newBatch._id } }, { new: true, upsert: true });
+        yield User_1.User.updateMany({ _id: { $in: members } }, { $set: { batchChatId: newChat._id, batch: newBatch._id } }, { new: true, upsert: true });
         res.status(201).json({ success: true, message: "Batch created successfully", data: newBatch });
     }
     catch (error) {

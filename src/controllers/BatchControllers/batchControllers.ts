@@ -52,7 +52,7 @@ export const createBatch = async (req: AuthReq, res: Response): Promise<any> => 
     // Add chat & batch reference to all members
     await User.updateMany(
       { _id: { $in: members } },
-      { $set: { batchChatId: newChat._id, batchId: newBatch._id } },
+      { $set: { batchChatId: newChat._id, batch: newBatch._id } },
       { new: true, upsert: true }
     );
 
