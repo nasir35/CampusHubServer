@@ -66,7 +66,7 @@ export const getTodayClasses = async (req: Request, res: Response) => {
 export const modifySchedule = async (req: Request, res: Response): Promise<any> => {
   try {
     const { scheduleId } = req.params;
-    const { action, ...updateData } = req.body;
+    const { action, updateData } = req.body;
 
     if (action === "add") {
       // Directly call the model to create a new schedule

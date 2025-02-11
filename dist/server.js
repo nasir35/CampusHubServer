@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -13,6 +22,7 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const postRoutes_1 = __importDefault(require("./routes/postRoutes"));
 const batchRoutes_1 = __importDefault(require("./routes/batchRoutes"));
+const Chat_1 = require("./models/Chat");
 dotenv_1.default.config();
 (0, connectDB_1.default)();
 const app = (0, express_1.default)();
@@ -35,17 +45,21 @@ const io = new socket_io_1.Server(server, {
     },
 });
 io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
-    // User joins a chat room
+    console.log("New user connected:", socket.id);
+    // Join chat room
     socket.on("join_chat", (chatId) => {
         socket.join(chatId);
-        console.log(`User joined chat: ${chatId}`);
     });
-    // Handle sending and receiving messages
-    socket.on("send_message", (data) => {
-        io.to(data.chatId).emit("receive_message", data);
-    });
-    // Handle disconnection
+    // Send & broadcast message
+    socket.on("send_message", (_a) => __awaiter(void 0, [_a], void 0, function* ({ chatId, senderId, content }) {
+        const chat = yield Chat_1.Chat.findById(chatId);
+        if (!chat)
+            return;
+        const newMessage = { sender: senderId, content, createdAt: new Date(), readBy: [] };
+        chat.messages.push(newMessage);
+        yield chat.save();
+        io.to(chatId).emit("receive_message", newMessage); // Send message to all users in the chat room
+    }));
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
     });

@@ -47,7 +47,7 @@ router.delete("/delete/:batchId", batchControllers_1.deleteBatch);
 /*********************Announcement Route*********************************/
 router.get("/announcements", authMiddleware_1.authenticateUser, announcementController_1.getAnnouncements);
 router.get("/announcements/:id", authMiddleware_1.authenticateUser, announcementController_1.getSingleAnnouncement);
-router.post("/announcements", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.createAnnouncement); //{ title, message, batchId, createdBy }
+router.post("/announcements/create", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.createAnnouncement); //{ title, message, batchId, createdBy }
 router.put("/announcements/update/:id", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.updateAnnouncement); //{batchId, update }
 router.delete("/announcements/:id", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, announcementController_1.deleteAnnouncement); //<header>{ batchId }
 /****************************Routine Routes******************************* */
@@ -55,9 +55,11 @@ router.get("/routines/:batchId", authMiddleware_1.authenticateUser, routineContr
 router.post("/routines/create", authMiddleware_1.authenticateUser, routineController_1.createRoutine); //{ name, startDate, endDate, batchId, createdBy, status }
 router.post("/routines/status/:routineId", routineController_1.archiveRoutine);
 /****************************Schedule Routes******************************* */
-router.post("/schedules/create", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, scheduleController_1.createSchedule); //{ batchId, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
+router.post("/schedules/create", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, scheduleController_1.createSchedule);
+//{ batchId, subject, startTime, endTime, dayOfWeek, routineId, classroom, isBreak, group }
 router.get("/schedules/:routineId", authMiddleware_1.authenticateUser, scheduleController_1.getSchedulesForRoutine); //{batchId}
 router.get("/schedules/today-classes/:batchId", authMiddleware_1.authenticateUser, scheduleController_1.getTodayClasses);
 router.get("/schedules/tomorrow-classes/:batchId", authMiddleware_1.authenticateUser, scheduleController_1.getTomorrowsClasses);
-router.put("/schedules/modify/:scheduleId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, scheduleController_1.modifySchedule); // {batchId, action, updateData} Note: allowed action type: 'add', 'update', 'cancel', 'delete'
+router.put("/schedules/modify/:scheduleId", authMiddleware_1.authenticateUser, authorizeBatchAdmin_1.authorizeBatchAdmin, scheduleController_1.modifySchedule);
+// {batchId, action, updateData} Note: allowed action type: 'add', 'update', 'cancel', 'delete'
 exports.default = router;
