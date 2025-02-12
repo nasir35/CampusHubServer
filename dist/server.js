@@ -22,7 +22,7 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const postRoutes_1 = __importDefault(require("./routes/postRoutes"));
 const batchRoutes_1 = __importDefault(require("./routes/batchRoutes"));
-const Chat_1 = require("./models/Chat");
+const Message_1 = require("./models/Message");
 dotenv_1.default.config();
 (0, connectDB_1.default)();
 const app = (0, express_1.default)();
@@ -46,19 +46,23 @@ const io = new socket_io_1.Server(server, {
 });
 io.on("connection", (socket) => {
     console.log("New user connected:", socket.id);
-    // Join chat room
     socket.on("join_chat", (chatId) => {
         socket.join(chatId);
     });
-    // Send & broadcast message
     socket.on("send_message", (_a) => __awaiter(void 0, [_a], void 0, function* ({ chatId, senderId, content }) {
-        const chat = yield Chat_1.Chat.findById(chatId);
-        if (!chat)
-            return;
-        const newMessage = { sender: senderId, content, createdAt: new Date(), readBy: [] };
-        chat.messages.push(newMessage);
-        yield chat.save();
-        io.to(chatId).emit("receive_message", newMessage); // Send message to all users in the chat room
+        try {
+            const newMessage = yield Message_1.Message.create({
+                chatId,
+                sender: senderId,
+                content,
+                readBy: [senderId],
+            });
+            // Emit message to all users in the chat room
+            io.to(chatId).emit("receive_message", newMessage);
+        }
+        catch (error) {
+            console.error("Error sending message:", error);
+        }
     }));
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);

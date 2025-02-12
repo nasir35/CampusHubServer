@@ -10,6 +10,7 @@ import { Announcement } from "../../models/Batch/Announcement";
 import { Resource } from "../../models/Batch/Resources";
 import { IMember, Member } from "../../models/Batch/Member";
 import { Routine } from "../../models/Batch/Routine";
+import { Message } from "../../models/Message";
 
 export const createBatch = async (req: AuthReq, res: Response): Promise<any> => {
   try {
@@ -393,6 +394,9 @@ export const deleteBatch = async (req: Request, res: Response): Promise<any> => 
 
     // Delete related chat
     if (batch.chatId) {
+      // delete all messages that are associated with chatId
+      await Message.deleteMany({ chatId: batch.chatId });
+      // delete the chat itself
       await Chat.findByIdAndDelete(batch.chatId);
     }
 

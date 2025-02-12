@@ -44,13 +44,6 @@ const ChatSchema = new mongoose_1.Schema({
         },
     },
     members: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: "User", required: true }],
-    messages: [
-        {
-            sender: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "User", required: true },
-            content: { type: String, required: true },
-            createdAt: { type: Date, default: Date.now },
-            readBy: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: "User" }], // Tracks seen users
-        },
-    ],
+    lastMessage: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Message" }, // Stores last sent message
 }, { timestamps: true });
 exports.Chat = mongoose_1.default.model("Chat", ChatSchema);

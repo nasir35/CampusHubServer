@@ -8,7 +8,7 @@ import userRoutes from "./routes/userRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import postRoutes from "./routes/postRoutes";
 import batchRoutes from "./routes/batchRoutes";
-import { Chat } from "./models/Chat";
+import { Message } from "./models/Message";
 
 dotenv.config();
 connectDB();
@@ -40,21 +40,24 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("New user connected:", socket.id);
 
-  // Join chat room
   socket.on("join_chat", (chatId) => {
     socket.join(chatId);
   });
 
-  // Send & broadcast message
   socket.on("send_message", async ({ chatId, senderId, content }) => {
-    const chat = await Chat.findById(chatId);
-    if (!chat) return;
+    try {
+      const newMessage = await Message.create({
+        chatId,
+        sender: senderId,
+        content,
+        readBy: [senderId],
+      });
 
-    const newMessage = { sender: senderId, content, createdAt: new Date(), readBy: [] };
-    chat.messages.push(newMessage);
-    await chat.save();
-
-    io.to(chatId).emit("receive_message", newMessage); // Send message to all users in the chat room
+      // Emit message to all users in the chat room
+      io.to(chatId).emit("receive_message", newMessage);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   });
 
   socket.on("disconnect", () => {

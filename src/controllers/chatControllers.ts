@@ -1,17 +1,19 @@
-import { Request, Response } from "express";
-import {Chat} from "../models/Chat";
-import { createNotification } from "./notificationController";
-import asyncHandler from "../middlewares/asyncHandler";
-import { ApiResponse } from "../types/response";
-import { User } from "../models/User";
-import {findChatBetweenUsers} from "../utils/findChatBetweenUsers"
 import mongoose from "mongoose";
+import { Request, Response } from "express";
+import { ApiResponse } from "../types/response";
+import { Chat } from "../models/Chat";
+import { User } from "../models/User";
+import { findChatBetweenUsers } from "../utils/findChatBetweenUsers";
+import { IMessage, Message } from "../models/Message";
+import { AuthReq } from "../middlewares/authMiddleware";
 
 export const createBinaryChat = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   const { senderId, receiverId } = req.body;
 
   if (!senderId || !receiverId) {
-    return res.status(400).json({ success: false, message: "Both senderId and receiverId are required." });
+    return res
+      .status(400)
+      .json({ success: false, message: "Both senderId and receiverId are required." });
   }
 
   try {
@@ -22,7 +24,9 @@ export const createBinaryChat = async (req: Request, res: Response<ApiResponse>)
     });
 
     if (existingChat) {
-      return res.status(200).json({ success: true, message: "Chat already exists", data: existingChat });
+      return res
+        .status(200)
+        .json({ success: true, message: "Chat already exists", data: existingChat });
     }
 
     // Create new binary chat
@@ -39,128 +43,92 @@ export const createBinaryChat = async (req: Request, res: Response<ApiResponse>)
   }
 };
 
-export const createBatchChat = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
-  const { name, creatorId } = req.body;
-
-  if (!name || !creatorId) {
-    return res.status(400).json({ success: false, message: "Group chat must have a name!" });
-  }
-
-  try {
-    let members:any = [];
-    // Add creator to the members list
-    if (!members.includes(creatorId)) {
-      members.push(creatorId);
-    }
-
-    // Create new group chat
-    const newChat = new Chat({ isGroup: true, name, members });
-    await newChat.save();
-
-    // Add chat reference to all members
-    await User.updateMany({ _id: { $in: members } }, { $push: { chats: newChat._id } });
-
-    res.status(201).json({ success: true, message: "Group Chat created", data: newChat });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error creating group chat", data: error });
-  }
-};
-
-
-
-export const findChatId = async (req: Request, res: Response<ApiResponse>): Promise<any> => { 
+export const findChatId = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   try {
     const { senderId, receiverId } = req.body;
-     const existingChat = await findChatBetweenUsers(senderId, receiverId);
+    const existingChat = await findChatBetweenUsers(senderId, receiverId);
 
-     if (!existingChat) {
-       return res.status(404).json({ success: false, message: "Chat doesn't exists" });
+    if (!existingChat) {
+      return res.status(404).json({ success: false, message: "Chat doesn't exists" });
     }
-    return res.status(200).json({ success: true, message: "ChatId found successfully.", data: existingChat._id });
-  }
-  catch (err) {
+    return res
+      .status(200)
+      .json({ success: true, message: "ChatId found successfully.", data: existingChat._id });
+  } catch (err) {
     return res.status(500).json({ success: false, message: "ChatId fetching error!" });
   }
-}
+};
 
 export const getAllchats = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
   try {
     const chats = await Chat.find().sort({ createdAt: -1 });
-    return res.status(200).json({ success: true, message: `${chats.length} Chats founds.`, data: chats });
+    return res
+      .status(200)
+      .json({ success: true, message: `${chats.length} Chats founds.`, data: chats });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Chats fetching error!" });
   }
-  catch (err) {
-    return res.status(500).json({success:false, message: "Chats fetching error!"})
-  }
-}
+};
 
 // Get chats of a user
-export const getUserChats = async (req: Request, res: Response<ApiResponse>): Promise<any> => {
+export const getUserChats = async (req: Request, res: Response) => {
   try {
-    const chats = await Chat.find({ members: req.params.userId });
-    return res.status(200).json({ success: true, message: "Chats found", data: chats });
+    const { userId } = req.params;
+
+    // Find all chats where the user is a member
+    const chats = await Chat.find({ members: { $in: [userId] } })
+      .populate("members", "name email") // Populate member details
+      .populate("lastMessage"); // Populate last message
+
+    res.status(200).json(chats);
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Error fetching chats" });
+    console.error("Error retrieving user chats:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Send a new message
-export const sendMessage = async (req: Request, res: Response) : Promise<any> => {
-  const { chatId } = req.params;
-  const { senderId, content } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(senderId)) {
-    return res.status(400).json({ error: "Invalid chatId or senderId" });
-  }
-
+export const sendMessage = async (req: Request, res: Response): Promise<any> => {
   try {
+    const { chatId, senderId, content } = req.body;
+
+    // Check if chat exists
     const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
 
-    if (!chat) {
-      return res.status(404).json({ error: "Chat not found" });
-    }
-
-    // Create the new message
-    const newMessage = {
+    // Create and save the new message
+    const newMessage: any = await Message.create({
+      chatId,
       sender: senderId,
-      content: content,
-      createdAt: new Date(),
-      readBy: [senderId], // Message is automatically "read" by the sender
-    };
+      content,
+      readBy: [],
+    });
 
-    chat.messages.push(newMessage);
+    // Update chat with lastMessage reference
+    chat.lastMessage = newMessage._id;
     await chat.save();
 
-    res.status(201).json({ success: true, message: newMessage });
+    res.status(200).json({ message: "Message sent successfully", newMessage });
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error sending message:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-
-export const getMessages = async (req: Request, res: Response) : Promise<any> => {
-  const { chatId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(chatId)) {
-    return res.status(400).json({ error: "Invalid chatId" });
-  }
-
+export const getMessages = async (req: Request, res: Response): Promise<any> => {
   try {
-    const chat = await Chat.findById(chatId)
-      .populate("messages.sender", "name email") // Populate sender details
-      .populate("messages.readBy", "name email"); // Populate users who read the message
+    const { chatId } = req.params;
 
-    if (!chat) {
-      return res.status(404).json({ error: "Chat not found" });
-    }
+    // Retrieve messages sorted by createdAt DESC
+    const messages = await Message.find({ chatId }).sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, messages: chat.messages });
+    res.status(200).json(messages);
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error retrieving messages:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-
-export const deleteChat = async (req: Request, res: Response) => {
+export const deleteChat = async (req: AuthReq, res: Response): Promise<any> => {
   try {
     const { chatId } = req.params;
 
@@ -169,15 +137,23 @@ export const deleteChat = async (req: Request, res: Response) => {
     if (!chat) {
       return res.status(404).json({ success: false, message: "Chat not found" });
     }
+    if (!req?.user?.id) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const user: any = await User.findById(req.user.id);
 
+    if (req?.user?.role !== "Admin") {
+      if (user?.chats.includes(new mongoose.Types.ObjectId(chatId))) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Unauthorized to delete this message" });
+      }
+    }
     // Delete all messages from the chat
-    await Chat.updateOne({ _id: chatId }, { $set: { messages: [] } });
+    await Message.deleteMany({ chatId });
 
     // Remove the chat from users' chat lists
-    await User.updateMany(
-      { _id: { $in: chat.members } },
-      { $pull: { chats: chatId } }
-    );
+    await User.updateMany({ _id: { $in: chat.members } }, { $pull: { chats: chatId } });
 
     // Finally, delete the chat
     await Chat.findByIdAndDelete(chatId);
@@ -189,7 +165,7 @@ export const deleteChat = async (req: Request, res: Response) => {
   }
 };
 
-export const readMessageUpdate = async (req: Request, res: Response) : Promise<any> => {
+export const readMessageUpdate = async (req: Request, res: Response): Promise<any> => {
   const { chatId, messageId } = req.params;
   const userId = req.body.userId; // User who is reading the message
 
@@ -198,18 +174,45 @@ export const readMessageUpdate = async (req: Request, res: Response) : Promise<a
   }
 
   try {
-    const chat = await Chat.findOneAndUpdate(
-      { _id: chatId, "messages._id": messageId },
-      { $addToSet: { "messages.$.readBy": userId } }, // ✅ Only adds user if not already present
+    const message = await Message.findOneAndUpdate(
+      { _id: messageId },
+      { $addToSet: { readBy: userId } },
       { new: true }
     );
 
-    if (!chat) {
-      return res.status(404).json({ error: "Chat or message not found" });
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" });
     }
 
-    res.status(200).json({ success: true, chat });
+    res.status(200).json({ success: true, data: message });
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const deleteMessage = async (req: AuthReq, res: Response): Promise<any> => {
+  try {
+    const { messageId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ success: false, message: "Invalid message ID" });
+    }
+    const message: any = await Message.findById(messageId);
+    const senderId = message.senderId;
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found" });
+    }
+    if (req?.user?.role !== "Admin") {
+      if (req?.user?.id !== senderId) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Unauthorized to delete this message" });
+      }
+    }
+    await Message.findByIdAndDelete(messageId);
+    res.status(200).json({ success: true, message: "Message deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

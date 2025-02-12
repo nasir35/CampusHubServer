@@ -23,6 +23,7 @@ const Announcement_1 = require("../../models/Batch/Announcement");
 const Resources_1 = require("../../models/Batch/Resources");
 const Member_1 = require("../../models/Batch/Member");
 const Routine_1 = require("../../models/Batch/Routine");
+const Message_1 = require("../../models/Message");
 const createBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { batchName, description, batchType, institute, batchPic } = req.body;
@@ -339,6 +340,9 @@ const deleteBatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // Delete related chat
         if (batch.chatId) {
+            // delete all messages that are associated with chatId
+            yield Message_1.Message.deleteMany({ chatId: batch.chatId });
+            // delete the chat itself
             yield Chat_1.Chat.findByIdAndDelete(batch.chatId);
         }
         // Delete related data
