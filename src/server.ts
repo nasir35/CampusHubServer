@@ -33,8 +33,10 @@ app.use("/api/batches", batchRoutes);
 // WebSocket Setup
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins for testing, restrict in production
+    origin: "*", // Allow all origins (update in production)
+    methods: ["GET", "POST"],
   },
+  transports: ["polling"], // Force polling instead of WebSockets
 });
 
 io.on("connection", (socket) => {

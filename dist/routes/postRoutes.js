@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const postController_1 = require("../controllers/postController");
 const router = express_1.default.Router();
+/****************************Post Routes **************************/
 router.post("/create", postController_1.createPost); //{ author, content, image }
 router.get("/", postController_1.getPosts);
 router.post("/like", postController_1.likePost); //{ postId, userId }

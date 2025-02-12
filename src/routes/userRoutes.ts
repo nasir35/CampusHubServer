@@ -1,9 +1,21 @@
 import express from "express";
-import { registerUser, loginUser, getUserProfile, getAllUsers, updateUserProfile, followUser, unfollowUser, deleteUser, getUserById, getMe } from "../controllers/userController";
+import {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  getAllUsers,
+  updateUserProfile,
+  followUser,
+  unfollowUser,
+  deleteUser,
+  getUserById,
+  getMe,
+} from "../controllers/userController";
 import { authenticateUser } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
+/*********************User Routes****************** */
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/", getAllUsers);

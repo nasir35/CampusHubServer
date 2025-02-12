@@ -36,45 +36,16 @@ import {
 
 const router = express.Router();
 
-// Get all batches
+/****************************Batch Routes******************************* */
 router.get("/", getBatches);
-// Get batch details by ID
 router.get("/details/:batchId", authenticateUser, getBatchById);
-
-//Get all members of a  batch
 router.get("/members/:batchId", getAllMembers);
-
-// Create a new batch
 router.post("/create", authenticateUser, createBatch); //{ batchName, description, batchType, institute, batchPic }
-
 router.post("/join/:batchId", authenticateUser, joinBatchController);
 router.post("/leave/:batchId", authenticateUser, leaveBatch);
-
-// Add a member to the batch (only admins)
 router.post("/add/:batchId", authenticateUser, authorizeBatchAdmin, addMember); //{ userId, role }
-
-// Update batch info (only admins/moderators)
 router.put("/update/:batchId", authenticateUser, authorizeBatchAdmin, updateBatch); //{updateData}
-
-// Modify today's schedule (cancel/reschedule/add/delete classes)
-// router.put(
-//   "/schedule/:batchId",
-//   authenticateUser,
-//   authorizeBatchAdmin,
-//   modifyTodayScheduleController
-// ); //{ action, subjectData }
-// {
-//   days: string[]; // e.g., ["Monday", "Wednesday"]
-//   time: string; // e.g., "10:00 AM - 12:00 PM"
-//   subject: string;
-//   instructor?: string;
-//   canceled?: boolean;
-// }
-
-// Remove a member from the batch (only admins)
 router.delete("/remove/:batchId", authenticateUser, authorizeBatchAdmin, removeMember); //{ memberId }
-
-// Delete a batch
 router.delete("/delete/:batchId", deleteBatch);
 
 /*********************Announcement Route*********************************/

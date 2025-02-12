@@ -41,8 +41,10 @@ app.use("/api/batches", batchRoutes_1.default);
 // WebSocket Setup
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: "*", // Allow all origins for testing, restrict in production
+        origin: "*", // Allow all origins (update in production)
+        methods: ["GET", "POST"],
     },
+    transports: ["polling"], // Force polling instead of WebSockets
 });
 io.on("connection", (socket) => {
     console.log("New user connected:", socket.id);
